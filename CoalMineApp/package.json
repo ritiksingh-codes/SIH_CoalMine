@@ -1,0 +1,23 @@
+{
+  "name": "coalmineapp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@react-native-community/netinfo": "12.0.1",
+    "expo": "~57.0.20",
+    "expo-image-picker": "~57.0.16",
+    "expo-location": "~57.0.16",
+    "expo-sqlite": "~57.0.2",
+    "expo-status-bar": "~57.0.1",
+    "express": "^5.2.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "private": true
+}

@@ -80,7 +80,7 @@ export default function App() {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: false,
       quality: 0.3, // Compressed for rapid offline sync
       base64: true,  // Encodes image directly into transferable Base64

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central HQ Web Dashboard | Safety & Hazards</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <h2>HQ<span>Dash</span></h2>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-target="hazards">Live Hazards</button>
+                <button class="nav-btn" data-target="legacy">Legacy Ingestion</button>
+            </nav>
+            <div class="stats-card">
+                <h3>Total Hazards</h3>
+                <p id="total-hazards" class="pulse">0</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <h1>Central Command Center</h1>
+                <p class="subtitle">Real-time Mine Safety & Compliance</p>
+            </header>
+
+            <!-- Hazards View -->
+            <section id="hazards-view" class="view-section active">
+                <div class="grid-container">
+                    <div class="map-container glass-panel">
+                        <h3>Interactive Map</h3>
+                        <div id="map"></div>
+                    </div>
+                    <div class="feed-container glass-panel">
+                        <h3>Live Hazard Feed</h3>
+                        <div id="hazard-feed" class="hazard-feed">
+                            <!-- Hazard cards will be injected here -->
+                            <p class="empty-state">Waiting for field reports...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Legacy Documents View -->
+            <section id="legacy-view" class="view-section hidden">
+                <div class="legacy-container glass-panel">
+                    <h3>DGMS Paper Register Digitization</h3>
+                    <p class="description">Upload photos of historical forms for automatic OCR extraction.</p>
+                    
+                    <div class="upload-zone" id="upload-zone">
+                        <div class="upload-icon">📄</div>
+                        <h4>Drag & Drop Document Photo</h4>
+                        <p>or click to browse files (JPEG, PNG)</p>
+                        <input type="file" id="file-input" accept="image/*" hidden>
+                    </div>
+
+                    <!-- Loader -->
+                    <div id="loader" class="loader hidden">
+                        <div class="spinner"></div>
+                        <p>Extracting safety records with AI...</p>
+                    </div>
+
+                    <div id="ocr-results" class="ocr-results hidden">
+                        <h4>Extracted Data (JSON)</h4>
+                        <pre id="json-output"></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="app.js"></script>
+</body>
+</html>

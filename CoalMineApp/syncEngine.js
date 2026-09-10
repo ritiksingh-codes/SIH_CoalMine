@@ -3,7 +3,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { getPendingHazards, markAsSynced } from './database';
 
 // ⚠️ REPLACE THIS WITH YOUR LAPTOP'S ACTUAL IPv4 ADDRESS FROM STEP 3
-const LAPTOP_IP = '10.32.172.137'; 
+const LAPTOP_IP = process.env.EXPO_PUBLIC_LAPTOP_IP || '10.141.120.119'; 
 const SERVER_URL = `http://${LAPTOP_IP}:5000/api/hazards`;
 
 let isSyncing = false;

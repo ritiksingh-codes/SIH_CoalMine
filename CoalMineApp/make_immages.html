@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Generate OCR Test Images</title>
+</head>
+
+<body
+    style="font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #0f172a; color: white;">
+
+    <div
+        style="text-align: center; background: #1e293b; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h1 style="margin-bottom: 10px;">Coal Mine DGMS Register Generator</h1>
+        <p style="color: #94a3b8; margin-bottom: 30px;">Generates 10 handwritten-style register cards tailored for your
+            OCR module.</p>
+
+        <button id="dlBtn"
+            style="padding: 14px 28px; font-size: 16px; font-weight: bold; cursor: pointer; background: #0284c7; color: white; border: none; border-radius: 8px; transition: 0.2s;">
+            📥 Download 10 Test Register Images (.PNG)
+        </button>
+    </div>
+
+    <canvas id="c" width="800" height="480" style="display:none;"></canvas>
+
+    <script>
+        const samples = [
+            { date: "08/09/2026", pit: "SECL-04", gas: "0.3%", haz: "Loose stone on wall. Minor crack near pillar." },
+            { date: "12-10-2026", pit: "BCCL-01", gas: "1.4%", haz: "Severe spalling detected on eastern flank." },
+            { date: "03/09/2026", pit: "ECL-09", gas: "NIL", haz: "Roof fall reported in gallery 4. Barricaded." },
+            { date: "15-08-2026", pit: "WCL-02", gas: "0.7%", haz: "Tension crack widening along bench crest." },
+            { date: "22/07/2026", pit: "CCL-08", gas: "0.1%", haz: "Routine face inspection. Loose stone cleared." },
+            { date: "01-09-2026", pit: "MCL-03", gas: "0.5%", haz: "Spalling along main haulage roadway." },
+            { date: "29/08/2026", pit: "NCL-05", gas: "NIL", haz: "No statutory violations. Normal flow." },
+            { date: "18-06-2026", pit: "SECL-11", gas: "0.9%", haz: "Imminent roof fall danger. Support reinforced." },
+            { date: "05/09/2026", pit: "BCCL-07", gas: "1.8%", haz: "High methane alert. Spalling on sidewalls." },
+            { date: "11-09-2026", pit: "ECL-02", gas: "0.4%", haz: "Fine tension crack observed across bench 3." }
+        ];
+
+        document.getElementById('dlBtn').addEventListener('click', () => {
+            const canvas = document.getElementById('c');
+            const ctx = canvas.getContext('2d');
+
+            samples.forEach((data, i) => {
+                // Create an aged paper texture
+                ctx.fillStyle = "#faf6ed";
+                ctx.fillRect(0, 0, 800, 480);
+
+                // Draw ledger guide lines
+                ctx.strokeStyle = "#d6e2e9";
+                ctx.lineWidth = 1;
+                for (let y = 80; y < 460; y += 42) {
+                    ctx.beginPath();
+                    ctx.moveTo(30, y);
+                    ctx.lineTo(770, y);
+                    ctx.stroke();
+                }
+
+                // Draw left red/pink margin line
+                ctx.strokeStyle = "#fca5a5";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(140, 20);
+                ctx.lineTo(140, 460);
+                ctx.stroke();
+
+                // Title text
+                ctx.fillStyle = "#1e293b";
+                ctx.font = "bold 20px 'Segoe Script', 'Comic Sans MS', cursive";
+                ctx.fillText("DGMS STATUTORY REGISTER - FORM IV", 160, 55);
+
+                // Handwritten form fields
+                ctx.font = "20px 'Segoe Script', 'Comic Sans MS', cursive";
+                ctx.fillStyle = "#0f172a";
+                ctx.fillText(`Report Date: ${data.date}`, 160, 115);
+                ctx.fillText(`PIT | SEAM: ${data.pit}`, 160, 195);
+                ctx.fillText(`CH4 GAS: ${data.gas}`, 160, 275);
+                ctx.fillText(`Hazard: ${data.haz}`, 160, 355);
+
+                // Download trigger
+                setTimeout(() => {
+                    const a = document.createElement('a');
+                    a.download = `dgms_register_sample_${i + 1}.png`;
+                    a.href = canvas.toDataURL('image/png');
+                    a.click();
+                }, i * 200); // Stagger downloads slightly so the browser doesn't block them
+            });
+        });
+    </script>
+</body>
+
+</html>

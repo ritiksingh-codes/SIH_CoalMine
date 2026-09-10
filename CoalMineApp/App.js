@@ -10,12 +10,21 @@ import {
   Alert, 
   StatusBar,
   ActivityIndicator,
-  Image
+  Image,
+  Modal,
+  Switch,
+  ScrollView,
+  Vibration
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { initDatabase, saveHazardLocally, getLocalHazards } from './database';
 import { registerAutoSyncListener, syncPendingRecords } from './syncEngine';
+import io from 'socket.io-client';
+
+// Connect to the local HQ Server's WebSocket using the same IP as the sync engine
+const LAPTOP_IP = process.env.EXPO_PUBLIC_LAPTOP_IP || '10.141.120.119'; 
+const socket = io(`http://${LAPTOP_IP}:5000`);
 
 export default function App() {
   const [hazardType, setHazardType] = useState('');
@@ -29,6 +38,29 @@ export default function App() {
   // GPS State
   const [location, setLocation] = useState(null);
   const [locLoading, setLocLoading] = useState(true);
+  // Real-Time Alert State
+  const [alertData, setAlertData] = useState(null);
+  const [senderAlert, setSenderAlert] = useState(null); // Custom AI Analysis Modal for the sender
+  
+  // Experimental P2P Mesh Toggle for Hackathon presentation
+  const [meshEnabled, setMeshEnabled] = useState(false);
+  
+  // Role Toggle
+  const [role, setRole] = useState('SURVEYOR'); // 'SURVEYOR' or 'WORKER'
+  
+  // Track hazards submitted by this device so we don't scream at ourselves
+  const submittedHazards = React.useRef(new Set());
+  
+  const playSiren = () => {
+    // Using Vibration API instead of Audio to avoid Expo Go native module crashes!
+    // Vibrate pattern: wait 0ms, vibrate 1000ms, wait 500ms (repeat)
+    Vibration.vibrate([0, 1000, 500], true);
+  };
+
+  const stopSiren = () => {
+    Vibration.cancel();
+    setAlertData(null);
+  };
 
   useEffect(() => {
     initDatabase();
@@ -43,7 +75,29 @@ export default function App() {
       refreshList();
     });
 
-    return () => unsubscribe();
+    // Real-Time Event Streaming Layer / AI Prediction Listener
+    socket.on('connect', () => {
+      console.log('Connected to HQ WebSocket for Real-Time Alerts');
+    });
+
+    socket.on('hazard_alert', (data) => {
+      console.log('Received Real-Time AI Prediction Alert:', data);
+      
+      // If WE submitted this hazard, don't show the massive red evacuation modal.
+      if (submittedHazards.current.has(data.id)) {
+        setSenderAlert(data);
+      } else {
+        // Someone ELSE submitted a critical hazard. Sound the alarm!
+        playSiren();
+        setAlertData(data);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      socket.off('connect');
+      socket.off('hazard_alert');
+    };
   }, []);
 
   const refreshList = () => {
@@ -104,6 +158,9 @@ export default function App() {
 
     const newHazardId = "HAZ-" + Date.now();
     const isoTimestamp = new Date().toISOString();
+    
+    // Remember that we submitted this ID
+    submittedHazards.current.add(newHazardId);
 
     saveHazardLocally({
       id: newHazardId,
@@ -129,9 +186,18 @@ export default function App() {
     }
   };
 
+  const triggerP2PDemo = () => {
+    playSiren();
+    setAlertData({
+      title: "🚨 P2P MESH EVACUATION 🚨",
+      message: "Danger detected via offline Bluetooth Mesh from a nearby worker! Roof sagging imminent.",
+    });
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
 
       {/* Network Connectivity Banner */}
       <View style={[styles.networkBanner, isOnline ? styles.bannerOnline : styles.bannerOffline]}>
@@ -141,6 +207,45 @@ export default function App() {
             : '🔴 OFFLINE (-300m Pit Mode) - Saving to SQLite'}
         </Text>
       </View>
+      
+      {/* Real-time Full Screen Danger Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={!!alertData}
+        onRequestClose={() => setAlertData(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{alertData?.title || '🚨 CRITICAL WARNING 🚨'}</Text>
+            <Text style={styles.modalMessage}>{alertData?.message}</Text>
+            
+            <TouchableOpacity style={styles.modalButton} onPress={stopSiren}>
+              <Text style={styles.modalButtonText}>UNDERSTOOD / EVACUATING</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sender Custom AI Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={!!senderAlert}
+        onRequestClose={() => setSenderAlert(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: '#f0fdf4', borderColor: '#16a34a' }]}>
+            <Text style={[styles.modalTitle, { color: '#16a34a' }]}>✅ Hazard Analyzed</Text>
+            <Text style={[styles.modalMessage, { color: '#0f172a', fontWeight: 'bold' }]}>Expert Recommendation:</Text>
+            <Text style={[styles.modalMessage, { color: '#334155' }]}>{senderAlert?.recommendation}</Text>
+            
+            <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#16a34a' }]} onPress={() => setSenderAlert(null)}>
+              <Text style={styles.modalButtonText}>ACKNOWLEDGE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* GPS Status Banner */}
       <View style={styles.gpsBanner}>
@@ -157,90 +262,134 @@ export default function App() {
         )}
       </View>
 
-      <Text style={styles.header}>⛏️ Coal Mine Field Logger</Text>
-      <Text style={styles.subHeader}>Statutory Photo & GPS Compliance Module</Text>
+      <Text style={styles.header}>⛏️ Coal Mine Field System</Text>
+      <Text style={styles.subHeader}>Statutory GPS Compliance Module</Text>
 
-      {/* Inputs */}
-      <TextInput
-        style={styles.input}
-        placeholder="Hazard Type (e.g., Loose Overburden, Gas Seepage)"
-        placeholderTextColor="#888"
-        value={hazardType}
-        onChangeText={setHazardType}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Severity (LOW, MEDIUM, HIGH, CRITICAL)"
-        placeholderTextColor="#888"
-        value={severity}
-        onChangeText={setSeverity}
-      />
-
-      <TextInput
-        style={[styles.input, { height: 50 }]}
-        placeholder="Description / Location specifics..."
-        placeholderTextColor="#888"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
-
-      {/* Camera Capture Section */}
-      <View style={styles.photoContainer}>
-        {photoUri ? (
-          <View style={styles.previewBox}>
-            <Image source={{ uri: photoUri }} style={styles.imageThumbnail} />
-            <TouchableOpacity style={styles.retakeBtn} onPress={handleCapturePhoto}>
-              <Text style={styles.retakeBtnText}>Retake 📷</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.cameraBtn} onPress={handleCapturePhoto}>
-            <Text style={styles.cameraBtnText}>📸 Take Mandatory Hazard Photo</Text>
-          </TouchableOpacity>
-        )}
+      {/* Role Selector */}
+      <View style={styles.roleContainer}>
+        <TouchableOpacity style={[styles.roleBtn, role === 'SURVEYOR' && styles.roleBtnActive]} onPress={() => setRole('SURVEYOR')}>
+          <Text style={[styles.roleText, role === 'SURVEYOR' && styles.roleTextActive]}>📋 SURVEYOR</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.roleBtn, role === 'WORKER' && styles.roleBtnActive]} onPress={() => {
+          setRole('WORKER');
+          // Clear history so the worker gets the red alert even if tested on the same device
+          submittedHazards.current.clear();
+        }}>
+          <Text style={[styles.roleText, role === 'WORKER' && styles.roleTextActive]}>👷‍♂️ WORKER</Text>
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-        <Text style={styles.btnText}>💾 Save Time-Stamped Hazard</Text>
-      </TouchableOpacity>
+      {/* Network Mesh Control (UI Mock for Judges) */}
+      <View style={styles.meshControlContainer}>
+        <Text style={styles.meshControlText}>
+          📶 Peer-to-Peer Bluetooth Mesh (Experimental)
+        </Text>
+        <Switch 
+          value={meshEnabled} 
+          onValueChange={setMeshEnabled}
+          trackColor={{ false: "#767577", true: "#81b0ff" }}
+          thumbColor={meshEnabled ? "#3b82f6" : "#f4f3f4"}
+        />
+      </View>
+      
+      {meshEnabled && (
+        <TouchableOpacity style={styles.p2pDemoBtn} onPress={triggerP2PDemo}>
+          <Text style={styles.p2pDemoText}>🔔 Simulate Incoming P2P Alert</Text>
+        </TouchableOpacity>
+      )}
 
-      <Text style={styles.listHeading}>Recorded Observations ({hazardsList.length})</Text>
+      {role === 'WORKER' ? (
+        <View style={styles.workerDashboard}>
+          <Text style={styles.workerDashboardTitle}>Environment Monitoring Active</Text>
+          <Text style={styles.workerDashboardSub}>You are connected to the Mesh. Awaiting safety broadcasts.</Text>
+        </View>
+      ) : (
+        <View>
+          <TextInput
+            style={styles.input}
+            placeholder="Hazard Type (e.g., Loose Overburden)"
+            placeholderTextColor="#888"
+            value={hazardType}
+            onChangeText={setHazardType}
+          />
 
-      {/* Records List */}
-      <FlatList
-        data={hazardsList}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            {item.image_uri && (
-              <Image source={{ uri: item.image_uri }} style={styles.cardImage} />
+          <TextInput
+            style={styles.input}
+            placeholder="Severity (LOW, MEDIUM, HIGH, CRITICAL)"
+            placeholderTextColor="#888"
+            value={severity}
+            onChangeText={setSeverity}
+          />
+
+          <TextInput
+            style={[styles.input, { height: 50 }]}
+            placeholder="Description / Location specifics..."
+            placeholderTextColor="#888"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+          />
+
+          {/* Camera Capture Section */}
+          <View style={styles.photoContainer}>
+            {photoUri ? (
+              <View style={styles.previewBox}>
+                <Image source={{ uri: photoUri }} style={styles.imageThumbnail} />
+                <TouchableOpacity style={styles.retakeBtn} onPress={handleCapturePhoto}>
+                  <Text style={styles.retakeBtnText}>Retake 📷</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.cameraBtn} onPress={handleCapturePhoto}>
+                <Text style={styles.cameraBtnText}>📸 Take Mandatory Hazard Photo</Text>
+              </TouchableOpacity>
             )}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{item.hazard_type} [{item.severity}]</Text>
-              <Text style={styles.cardDesc}>{item.description}</Text>
-              
-              <Text style={styles.coordText}>
-                📍 {item.latitude ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}` : 'No GPS'}
-              </Text>
-              <Text style={styles.timeText}>
-                ⏱️ {new Date(item.timestamp).toLocaleString()}
-              </Text>
-
-              <Text style={item.sync_status === 'PENDING' ? styles.pendingTag : styles.syncedTag}>
-                {item.sync_status === 'PENDING' ? '⏳ PENDING' : '✅ SYNCED TO HQ'}
-              </Text>
-            </View>
           </View>
-        )}
-      />
+
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+            <Text style={styles.btnText}>💾 Save Time-Stamped Hazard</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.listHeading}>Recorded Observations ({hazardsList.length})</Text>
+
+          {/* Records List */}
+          <FlatList
+            data={hazardsList}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                {item.image_uri && (
+                  <Image source={{ uri: item.image_uri }} style={styles.cardImage} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{item.hazard_type} [{item.severity}]</Text>
+                  <Text style={styles.cardDesc}>{item.description}</Text>
+                  
+                  <Text style={styles.coordText}>
+                    📍 {item.latitude ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}` : 'No GPS'}
+                  </Text>
+                  <Text style={styles.timeText}>
+                    ⏱️ {new Date(item.timestamp).toLocaleString()}
+                  </Text>
+
+                  <Text style={item.sync_status === 'PENDING' ? styles.pendingTag : styles.syncedTag}>
+                    {item.sync_status === 'PENDING' ? '⏳ PENDING' : '✅ SYNCED TO HQ'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          />
+        </View>
+      )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 14, paddingTop: 45, backgroundColor: '#f0f2f5' },
+  container: { flex: 1, paddingTop: 45, backgroundColor: '#f8fafc' },
+  scrollContent: { padding: 20, paddingBottom: 100 },
   networkBanner: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, marginBottom: 6, alignItems: 'center' },
   bannerOnline: { backgroundColor: '#dcfce7', borderWidth: 1, borderColor: '#86efac' },
   bannerOffline: { backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fca5a5' },
@@ -249,7 +398,19 @@ const styles = StyleSheet.create({
   gpsText: { fontSize: 11, fontWeight: '600', color: '#0369a1' },
   header: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   subHeader: { fontSize: 11, color: '#6b7280', marginBottom: 10 },
-  input: { backgroundColor: '#ffffff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#d1d5db', marginBottom: 6, fontSize: 13 },
+  input: { backgroundColor: '#ffffff', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#cbd5e1', marginBottom: 15, fontSize: 16 },
+  roleContainer: { flexDirection: 'row', marginBottom: 20, backgroundColor: '#e2e8f0', borderRadius: 8, padding: 4 },
+  roleBtn: { flex: 1, padding: 10, alignItems: 'center', borderRadius: 6 },
+  roleBtnActive: { backgroundColor: '#3b82f6' },
+  roleText: { fontSize: 14, fontWeight: 'bold', color: '#64748b' },
+  roleTextActive: { color: '#fff' },
+  workerDashboard: { backgroundColor: '#dbeafe', padding: 30, borderRadius: 12, alignItems: 'center', marginBottom: 20, borderWidth: 2, borderColor: '#bfdbfe' },
+  workerDashboardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e3a8a', textAlign: 'center', marginBottom: 10 },
+  workerDashboardSub: { fontSize: 14, color: '#3b82f6', textAlign: 'center' },
+  meshControlContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 10, backgroundColor: '#fff', borderRadius: 8, marginBottom: 10 },
+  meshControlText: { fontSize: 13, fontWeight: '600' },
+  p2pDemoBtn: { backgroundColor: '#8b5cf6', padding: 15, borderRadius: 8, alignItems: 'center', marginBottom: 20 },
+  p2pDemoText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   photoContainer: { marginVertical: 6 },
   cameraBtn: { backgroundColor: '#0284c7', padding: 10, borderRadius: 6, alignItems: 'center' },
   cameraBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 13 },
@@ -267,5 +428,11 @@ const styles = StyleSheet.create({
   coordText: { fontSize: 10, color: '#0369a1', fontFamily: 'monospace' },
   timeText: { fontSize: 10, color: '#6b7280' },
   pendingTag: { fontSize: 10, fontWeight: 'bold', color: '#c2410c', marginTop: 2 },
-  syncedTag: { fontSize: 10, fontWeight: 'bold', color: '#15803d', marginTop: 2 }
+  syncedTag: { fontSize: 10, fontWeight: 'bold', color: '#15803d', marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#ef4444', padding: 25, borderRadius: 12, width: '85%', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 },
+  modalTitle: { fontSize: 22, fontWeight: 'bold', color: 'white', marginBottom: 15, textAlign: 'center' },
+  modalMessage: { fontSize: 16, color: 'white', textAlign: 'center', marginBottom: 25, lineHeight: 22 },
+  modalButton: { backgroundColor: 'white', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center' },
+  modalButtonText: { color: '#ef4444', fontWeight: 'bold', fontSize: 16 },
 });

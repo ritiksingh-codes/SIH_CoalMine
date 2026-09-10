@@ -1,47 +1,82 @@
-import pytesseract
-from PIL import Image, ImageOps
-import re
-import io
+import os
+import json
+from io import BytesIO
+from PIL import Image
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
 
-# Point to your local Windows Tesseract installation
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# Load environment variables from the .env file in the parent directory
+env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+load_dotenv(env_path)
+
+def optimize_image(image_bytes: bytes) -> bytes:
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        img.thumbnail((800, 800)) # Maximum compression for ultra-fast upload
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        out = BytesIO()
+        img.save(out, format='JPEG', quality=80)
+        return out.getvalue()
+    except Exception:
+        return image_bytes # fallback if it fails
 
 def process_legacy_document(image_bytes: bytes) -> dict:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("GEMINI_API_KEY not found in .env")
+        return get_mock_data()
+        
     try:
-        # 1. Preprocess: Grayscale and binarize for higher contrast
-        img = Image.open(io.BytesIO(image_bytes))
-        gray = ImageOps.grayscale(img)
-        binarized = gray.point(lambda p: 255 if p > 140 else 0)
-
-        # 2. Extract raw text
-        raw_text = pytesseract.image_to_string(binarized)
+        client = genai.Client(api_key=api_key)
+        
+        optimized_bytes = optimize_image(image_bytes)
+        
+        image_part = types.Part.from_bytes(
+            data=optimized_bytes,
+            mime_type='image/jpeg',
+        )
+        
+        prompt = """
+        You are a highly accurate mining safety digitizer. 
+        Read the ENTIRE handwritten text from this historical mining log. 
+        Do not omit any narrative details. Extract all specific fields AND the full textual narrative.
+        """
+        
+        schema = {
+            "type": "OBJECT",
+            "properties": {
+                "report_date": {"type": "STRING"},
+                "time": {"type": "STRING"},
+                "pit_seam_id": {"type": "STRING"},
+                "gas_concentration_ch4": {"type": "STRING"},
+                "equipment_status": {"type": "STRING"},
+                "full_narrative": {"type": "STRING", "description": "The complete narrative text transcribed word-for-word."},
+                "critical_violations": {
+                    "type": "ARRAY",
+                    "items": {"type": "STRING"}
+                }
+            }
+        }
+        
+        response = client.models.generate_content(
+            model='gemini-flash-lite-latest',
+            contents=[image_part, prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=schema,
+            )
+        )
+        return json.loads(response.text)
     except Exception as e:
-        print(f"Tesseract OCR failed ({e}). Using mock data.")
-        raw_text = "Date: 14/09/2026\nMINE: PIT-ALPHA\nCH4: 1.2%\nCondition: crack and loose stone near pillar."
+        print(f"Gemini OCR failed: {e}")
+        return get_mock_data()
 
-    # 3. Parse specific DGMS entities
-    parsed = {
-        "report_date": None,
-        "pit_seam_id": None,
-        "gas_concentration_ch4": "Not Recorded",
-        "critical_violations": []
+def get_mock_data():
+    return {
+        "report_date": "14/09/2026",
+        "pit_seam_id": "PIT-ALPHA",
+        "gas_concentration_ch4": "1.2%",
+        "critical_violations": ["Crack", "Loose Stone (Mock)"]
     }
-
-    date_match = re.search(r'\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b', raw_text)
-    if date_match:
-        parsed["report_date"] = date_match.group(1)
-
-    pit_match = re.search(r'(?:PIT|MINE|SEAM)\s*[:=\-]?\s*([A-Za-z0-9\-_]+)', raw_text, re.IGNORECASE)
-    if pit_match:
-        parsed["pit_seam_id"] = pit_match.group(1).upper()
-
-    gas_match = re.search(r'(?:CH4|GAS)\s*[:=\-]?\s*([0-9\.]+\s*%?|NIL)', raw_text, re.IGNORECASE)
-    if gas_match:
-        parsed["gas_concentration_ch4"] = gas_match.group(1).upper()
-
-    hazard_keywords = [r"crack", r"loose stone", r"spalling", r"roof fall"]
-    for kw in hazard_keywords:
-        if re.search(r'\b' + kw + r'\b', raw_text, re.IGNORECASE):
-            parsed["critical_violations"].append(kw.title())
-
-    return parsed

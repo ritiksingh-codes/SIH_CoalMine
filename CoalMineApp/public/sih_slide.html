@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIH PPT - Detailed Technical Approach</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .slide-container {
+            width: 1280px;
+            height: 720px; /* 16:9 Aspect Ratio */
+            background-color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            box-sizing: border-box;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        .header-title {
+            color: #1e40af;
+            font-size: 32px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .team-name {
+            background-color: #e0e7ff;
+            color: #1e40af;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 16px;
+            border: 2px solid #1e40af;
+        }
+
+        .content {
+            display: flex;
+            height: 100%;
+        }
+
+        .right-column {
+            flex: 1;
+            background-color: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Adjust mermaid rendering size */
+        .mermaid {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .mermaid svg {
+            max-width: 100%;
+            max-height: 600px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="slide-container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="team-name">Your Team Name</div>
+            <div class="header-title">Detailed Technical Pipeline</div>
+            <div style="font-weight: bold; font-size: 18px; color: #f59e0b;">SIH 2024</div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+            <!-- Full Width Flowchart -->
+            <div class="right-column">
+                <div class="mermaid">
+                    flowchart TD
+                        classDef mobile fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff
+                        classDef server fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff
+                        classDef ai fill:#4c1d95,stroke:#8b5cf6,stroke-width:2px,color:#fff
+                        classDef web fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#fff
+                        classDef highlight fill:#be123c,stroke:#f43f5e,stroke-width:2px,color:#fff
+                    
+                        subgraph Client_Layer ["1. Edge Client Layer (React Native)"]
+                            direction LR
+                            S["📱 Surveyor Interface<br/>- Capture GPS & Timestamp<br/>- Compress Image to Base64<br/>- SQLite Offline Caching Queue"]:::mobile
+                            W["🚨 Worker Interface<br/>- Socket.io P2P Listener<br/>- Continuous Hardware Vibration<br/>- Full-Screen Red SOS Override"]:::highlight
+                        end
+                    
+                        subgraph Network_Layer ["2. Zero-Internet Network Layer"]
+                            LAN(("📡 Local Mine Intranet<br/>Wi-Fi Mesh / Socket.io Bi-Directional Stream")):::server
+                        end
+                    
+                        subgraph Backend_Layer ["3. Backend API Gateway (Node.js)"]
+                            HQ["💻 Central Dispatch Server<br/>- Express.js REST Endpoints<br/>- JSON Central Ledger Syncing<br/>- WebSocket Broadcasting Hub"]:::server
+                        end
+                    
+                        subgraph AI_Layer ["4. AI Statutory Engine (Python)"]
+                            direction LR
+                            FAST["FastAPI Microservice (Port 8000)"]:::ai
+                            LLM{"Groq LLM Engine<br/>- DGMS Rules Verification<br/>- Severity Override (High/Critical)<br/>- Actionable Mitigation"}:::ai
+                            OCR["📄 AI OCR Engine<br/>- Legacy Paper Digitization"]:::ai
+                            EOD["📊 EOD AI Reporter<br/>- Daily Trend Analysis<br/>- Safety Grading System"]:::ai
+                            
+                            FAST --> LLM
+                            FAST --> OCR
+                            FAST --> EOD
+                        end
+                    
+                        subgraph Web_Layer ["5. Executive Dashboard (Vanilla JS)"]
+                            direction LR
+                            MAP["🗺️ Leaflet.js<br/>- Dynamic GPS Pinning"]:::web
+                            CHART["📈 Chart.js<br/>- Real-time Hazard Distribution"]:::web
+                            UI["📋 Live Audit Feed & EOD Report"]:::web
+                        end
+                    
+                        %% Workflow Connections
+                        S ==>|"1. Sync Offline Payload (POST)"| LAN
+                        LAN ==>|"2. Route Request"| HQ
+                        
+                        HQ <==>|"3. Request Compliance Verification"| FAST
+                        
+                        HQ ==>|"4. Broadcast Emergency SOS"| LAN
+                        LAN ==>|"5. Trigger Hardware Alert"| W
+                        
+                        HQ ==>|"6. Stream Verified Data"| MAP
+                        HQ ==>|"7. Stream Verified Data"| CHART
+                        HQ ==>|"8. Stream Verified Data"| UI
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { fontFamily: 'Segoe UI' } });
+    </script>
+</body>
+</html>

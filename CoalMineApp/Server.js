@@ -3,9 +3,41 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const http = require('http');
+const { Server } = require('socket.io');
+const z = require('zod');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
 const PORT = 5000;
+
+// Setup Socket.IO connection event
+io.on('connection', (socket) => {
+  console.log(`[SOCKET] Worker connected: ${socket.id}`);
+  socket.on('disconnect', () => {
+    console.log(`[SOCKET] Worker disconnected: ${socket.id}`);
+  });
+});
+
+// Zod Schema for Hazard Validation
+const hazardSchema = z.object({
+  id: z.string().optional(),
+  mine_id: z.string().optional(),
+  hazard_type: z.string(),
+  severity: z.string(),
+  description: z.string(),
+  latitude: z.union([z.number(), z.string(), z.null()]).optional(),
+  longitude: z.union([z.number(), z.string(), z.null()]).optional(),
+  image_uri: z.string().optional(),
+  timestamp: z.string().optional()
+});
 
 // Allow large payloads for base64 image strings
 app.use(express.json({ limit: '50mb' }));
@@ -31,54 +63,215 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-const centralLedger = [];
+// Database files
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir);
+}
 
-app.post('/api/hazards', (req, res) => {
-  const hazard = req.body;
-  let savedImageFilename = null;
+const LIVE_HAZARDS_FILE = path.join(dataDir, 'live_hazards.json');
+const HISTORICAL_FILE = path.join(dataDir, 'historical_archives.json');
 
-  // If the record has base64 image data, convert and save it to laptop disk
-  if (hazard.image_uri && hazard.image_uri.startsWith('data:image')) {
-    const base64Data = hazard.image_uri.replace(/^data:image\/\w+;base64,/, '');
-    savedImageFilename = `${hazard.id || Date.now()}.jpeg`;
-    const filePath = path.join(uploadDir, savedImageFilename);
+function loadData(filePath) {
+  if (fs.existsSync(filePath)) {
+    try {
+      const fileData = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(fileData);
+    } catch (e) {
+      console.error(`Error reading ${filePath}:`, e);
+    }
+  }
+  return [];
+}
 
-    fs.writeFileSync(filePath, base64Data, 'base64');
+function saveData(filePath, data) {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    console.error(`Error saving ${filePath}:`, e);
+  }
+}
+
+let centralLedger = loadData(LIVE_HAZARDS_FILE);
+let historicalLedger = loadData(HISTORICAL_FILE);
+
+function processArchives() {
+  const now = new Date();
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+  let didShift = false;
+
+  const stillLive = [];
+  
+  for (const hazard of centralLedger) {
+    // Legacy documents injected to live hazards shouldn't happen anymore, but just in case
+    if (hazard.hazard_type === "Historical Paper Record") {
+      historicalLedger.push(hazard);
+      didShift = true;
+      continue;
+    }
+
+    const hazardTime = new Date(hazard.received_at || hazard.timestamp);
+    if ((now - hazardTime) >= TWENTY_FOUR_HOURS) {
+      // Shift to historical
+      historicalLedger.push(hazard);
+      didShift = true;
+    } else {
+      stillLive.push(hazard);
+    }
   }
 
-  centralLedger.push({
-    ...hazard,
-    saved_image: savedImageFilename,
-    received_at: new Date().toISOString()
-  });
+  if (didShift) {
+    centralLedger = stillLive;
+    saveData(LIVE_HAZARDS_FILE, centralLedger);
+    saveData(HISTORICAL_FILE, historicalLedger);
+    console.log(`[ARCHIVER] Shifted older hazards to Historical Archives.`);
+  }
+}
 
-  const lat = hazard.latitude ? Number(hazard.latitude).toFixed(5) : 'N/A';
-  const lon = hazard.longitude ? Number(hazard.longitude).toFixed(5) : 'N/A';
-  const photoUrl = savedImageFilename
-    ? `http://localhost:${PORT}/uploads/${savedImageFilename}`
-    : 'No Image Attached';
+app.get('/api/hazards', (req, res) => {
+  processArchives();
+  res.json(centralLedger);
+});
 
-  console.clear();
-  console.log("==========================================================");
-  console.log("🚨 [CENTRAL HQ COMPLIANCE MONITOR] NEW HAZARD SYNCED 🚨");
-  console.log("==========================================================");
-  console.log(`Ticket ID    : ${hazard.id}`);
-  console.log(`Mine ID      : ${hazard.mine_id}`);
-  console.log(`Hazard Type  : ${hazard.hazard_type} [${hazard.severity}]`);
-  console.log(`Field Time   : ${hazard.timestamp}`);
-  console.log(`GPS Coords   : Lat ${lat}, Lon ${lon}`);
-  console.log(`Maps Link    : https://www.google.com/maps?q=${lat},${lon}`);
-  console.log(`Photo Link   : ${photoUrl}`);
-  console.log(`Description  : ${hazard.description}`);
-  console.log("----------------------------------------------------------");
-  console.log(`Total Synced Records at HQ: ${centralLedger.length}`);
-  console.log("==========================================================\n");
+app.get('/api/historical', (req, res) => {
+  processArchives();
+  res.json(historicalLedger);
+});
 
-  res.status(200).json({ success: true, message: "Logged at Headquarters with Photo" });
+app.post('/api/hazards', async (req, res) => {
+  try {
+    // 1. DATA VALIDATION (Zod)
+    const hazard = hazardSchema.parse(req.body);
+    let savedImageFilename = null;
+
+    // If the record has base64 image data, convert and save it to laptop disk
+    if (hazard.image_uri && hazard.image_uri.startsWith('data:image')) {
+      const base64Data = hazard.image_uri.replace(/^data:image\/\w+;base64,/, '');
+      savedImageFilename = `${hazard.id || Date.now()}.jpeg`;
+      const filePath = path.join(uploadDir, savedImageFilename);
+
+      fs.writeFileSync(filePath, base64Data, 'base64');
+    }
+
+    // 2. LIVE AI PREDICTION VIA PYTHON MICROSERVICE
+    let aiCompliance = null;
+    let isCritical = false;
+    try {
+      const combinedText = `${hazard.hazard_type}. ${hazard.description}`;
+      console.log(`Sending live hazard to Groq AI Engine for prediction...`);
+      
+      const aiResponse = await fetch('http://127.0.0.1:8000/api/ai/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: combinedText })
+      });
+      
+      if (aiResponse.ok) {
+        const aiData = await aiResponse.json();
+        if (aiData.success && aiData.ai_compliance) {
+          aiCompliance = aiData.ai_compliance;
+          console.log(`[AI PREDICTION RECEIVED] Severity: ${aiCompliance.severity}`);
+          
+          isCritical = aiCompliance.severity === 'CRITICAL' || aiCompliance.severity === 'HIGH';
+        }
+      }
+    } catch (err) {
+      console.error("[AI PREDICTION ERROR]", err.message);
+      // Fallback to hardcoded logic if AI microservice is unreachable
+      isCritical = hazard.severity.toUpperCase() === 'CRITICAL' || 
+                   /gas|methane|fire|collapse|roof fall|explosion/i.test(hazard.hazard_type) || 
+                   /gas|methane|fire|collapse|roof fall|explosion/i.test(hazard.description);
+    }
+
+    // Save to central ledger with AI data
+    const hazardEntry = {
+      ...hazard,
+      ai_compliance: aiCompliance,
+      saved_image: savedImageFilename,
+      received_at: new Date().toISOString()
+    };
+    centralLedger.push(hazardEntry);
+    
+    saveData(LIVE_HAZARDS_FILE, centralLedger);
+
+    const lat = hazard.latitude ? Number(hazard.latitude).toFixed(5) : 'N/A';
+    const lon = hazard.longitude ? Number(hazard.longitude).toFixed(5) : 'N/A';
+    const photoUrl = savedImageFilename
+      ? `http://localhost:${PORT}/uploads/${savedImageFilename}`
+      : 'No Image Attached';
+
+    console.clear();
+    console.log("==========================================================");
+    console.log("🚨 [CENTRAL HQ COMPLIANCE MONITOR] NEW HAZARD SYNCED 🚨");
+    console.log("==========================================================");
+    console.log(`Ticket ID    : ${hazard.id}`);
+    console.log(`Mine ID      : ${hazard.mine_id}`);
+    console.log(`Hazard Type  : ${hazard.hazard_type} [${hazard.severity}]`);
+    console.log(`Field Time   : ${hazard.timestamp}`);
+    console.log(`GPS Coords   : Lat ${lat}, Lon ${lon}`);
+    console.log(`Maps Link    : https://www.google.com/maps?q=${lat},${lon}`);
+    console.log(`Photo Link   : ${photoUrl}`);
+    console.log(`Description  : ${hazard.description}`);
+    if (aiCompliance) {
+      console.log(`AI Prediction: ${JSON.stringify(aiCompliance, null, 2)}`);
+    }
+    console.log("----------------------------------------------------------");
+    console.log(`Total Synced Records at HQ: ${centralLedger.length}`);
+    console.log("==========================================================\n");
+
+    // 3. REAL-TIME EVENT STREAMING (Message Broker)
+    if (isCritical) {
+      console.log(`\n⚠️ [AI PREDICTION ALERT] CRITICAL HAZARD DETECTED! Broadcasting to all workers via WebSockets.\n`);
+      const alertMsg = aiCompliance 
+        ? `Danger detected: ${hazard.hazard_type}. AI Warning: ${aiCompliance.recommended_action}`
+        : `Danger detected: ${hazard.hazard_type}. ${hazard.description}. Please stay clear of this area!`;
+        
+      io.emit('hazard_alert', {
+        id: hazard.id,
+        title: "🚨 EVACUATION / CRITICAL WARNING 🚨",
+        message: alertMsg,
+        severity: aiCompliance ? aiCompliance.severity : hazard.severity,
+        recommendation: aiCompliance ? aiCompliance.recommended_action : "Follow standard safety protocols.",
+        latitude: hazard.latitude,
+        longitude: hazard.longitude,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.status(200).json({ success: true, message: "Logged at Headquarters with Photo" });
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      console.error("[VALIDATION ERROR]", e.errors);
+      return res.status(400).json({ error: "Validation failed", details: e.errors });
+    }
+    console.error("[SERVER ERROR]", e);
+    return res.status(500).json({ error: "Server error processing hazard" });
+  }
 });
 
 app.get('/api/hazards', (req, res) => {
   res.json(centralLedger);
+});
+
+app.get('/api/generate-report', async (req, res) => {
+  try {
+    console.log("Generating End of Day Report via AI...");
+    const aiResponse = await fetch('http://127.0.0.1:8000/api/ai/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hazards: centralLedger })
+    });
+    
+    if (!aiResponse.ok) {
+      throw new Error("AI microservice failed to generate report.");
+    }
+    
+    const result = await aiResponse.json();
+    res.json(result);
+  } catch (error) {
+    console.error("[REPORT ERROR]", error.message);
+    res.status(500).json({ error: "Failed to generate report" });
+  }
 });
 
 app.post('/api/legacy-documents', async (req, res) => {
@@ -121,12 +314,45 @@ app.post('/api/legacy-documents', async (req, res) => {
     console.log("==========================================================");
     console.log(`Saved File   : ${filename}`);
     console.log(`Parsed Data  :`, JSON.stringify(ocrResult.extracted_data, null, 2));
+    if (ocrResult.ai_compliance) {
+      console.log(`AI Prediction:`, JSON.stringify(ocrResult.ai_compliance, null, 2));
+    }
     console.log("==========================================================\n");
+
+    const data = ocrResult.extracted_data;
+    
+    // Build a rich description using all extracted fields
+    let descParts = [];
+    if (data.full_narrative) descParts.push(`*Narrative:* "${data.full_narrative}"`);
+    if (data.equipment_status) descParts.push(`*Equipment:* ${data.equipment_status}`);
+    if (data.gas_concentration_ch4) descParts.push(`*CH4 Level:* ${data.gas_concentration_ch4}`);
+    if (data.critical_violations && data.critical_violations.length > 0) {
+      descParts.push(`*Violations:* ${data.critical_violations.join(', ')}`);
+    }
+    const desc = descParts.join(' | ') || "No description provided.";
+
+    historicalLedger.push({
+      id: `LEGACY_${document_id || Date.now()}`,
+      mine_id: data.pit_seam_id || "Unknown",
+      hazard_type: "Historical Paper Record",
+      severity: ocrResult.ai_compliance ? ocrResult.ai_compliance.severity : ((data.critical_violations && data.critical_violations.length > 0) ? "HIGH" : "LOW"),
+      timestamp: data.report_date || new Date().toISOString(),
+      time: data.time || '',
+      equipment: data.equipment_status || '',
+      narrative: data.full_narrative || '',
+      violations: data.critical_violations || [],
+      ch4: data.gas_concentration_ch4 || 'N/A',
+      ai_compliance: ocrResult.ai_compliance || null,
+      saved_image: filename,
+      received_at: new Date().toISOString()
+    });
+
+    saveData(HISTORICAL_FILE, historicalLedger);
 
     res.status(200).json({
       success: true,
-      message: "Document digitized",
-      data: ocrResult.extracted_data,
+      message: "Document digitized and synced to Headquarters",
+      data: data,
       saved_image: filename
     });
 
@@ -157,7 +383,23 @@ ocrProcess.on('close', (code) => {
   console.log(`[OCR Service] exited with code ${code}`);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n✅ Headquarters Server running on port ${PORT}`);
   console.log(`Ready to receive and save field hazard photos...\n`);
+});
+
+// Clean up Python process on exit to prevent zombie processes on port 8000
+const cleanup = () => {
+  if (ocrProcess && !ocrProcess.killed) {
+    ocrProcess.kill('SIGINT');
+  }
+  process.exit();
+};
+
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
+process.on('exit', () => {
+  if (ocrProcess && !ocrProcess.killed) {
+    ocrProcess.kill('SIGINT');
+  }
 });

@@ -22,9 +22,10 @@ import { initDatabase, saveHazardLocally, getLocalHazards } from './database';
 import { registerAutoSyncListener, syncPendingRecords } from './syncEngine';
 import io from 'socket.io-client';
 
-// Connect to the local HQ Server's WebSocket using the same IP as the sync engine
-const LAPTOP_IP = process.env.EXPO_PUBLIC_LAPTOP_IP || '10.141.120.119'; 
-const socket = io(`http://${LAPTOP_IP}:5000`);
+// Connect to the HQ Server's WebSocket.
+// Uses the same base URL as the sync engine — set EXPO_PUBLIC_SERVER_URL in your .env
+const SERVER_BASE_URL = process.env.EXPO_PUBLIC_SERVER_URL || 'http://localhost:5000';
+const socket = io(SERVER_BASE_URL);
 
 export default function App() {
   const [hazardType, setHazardType] = useState('');

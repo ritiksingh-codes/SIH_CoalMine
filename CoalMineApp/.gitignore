@@ -42,3 +42,12 @@ yarn-error.*
 
 # local env file
 .env
+
+# Server data and uploads (runtime data, not source code)
+uploads/
+data/
+
+# Python virtual environment
+ocr_service/venv/
+ocr_service/__pycache__/
+*.pyc

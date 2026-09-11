@@ -2,9 +2,10 @@
 import NetInfo from '@react-native-community/netinfo';
 import { getPendingHazards, markAsSynced } from './database';
 
-// ⚠️ REPLACE THIS WITH YOUR LAPTOP'S ACTUAL IPv4 ADDRESS FROM STEP 3
-const LAPTOP_IP = process.env.EXPO_PUBLIC_LAPTOP_IP || '10.141.120.119'; 
-const SERVER_URL = `http://${LAPTOP_IP}:5000/api/hazards`;
+// The live backend URL. 
+// For local dev: set EXPO_PUBLIC_SERVER_URL=http://10.x.x.x:5000 in your .env file
+// For production: set EXPO_PUBLIC_SERVER_URL=https://your-app.onrender.com in your .env file
+const SERVER_URL = `${process.env.EXPO_PUBLIC_SERVER_URL || 'http://localhost:5000'}/api/hazards`;
 
 let isSyncing = false;
 

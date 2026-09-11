@@ -6,9 +6,11 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-# Load environment variables from the .env file in the parent directory
-env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
-load_dotenv(env_path)
+# Load .env from the service directory, then fallback to parent directory.
+# This works for both local dev (Windows) and cloud (Linux).
+_service_dir = os.path.dirname(__file__)
+load_dotenv(os.path.join(_service_dir, '.env'))         # ocr_service/.env
+load_dotenv(os.path.join(_service_dir, '..', '.env'))   # project root .env (fallback)
 
 def optimize_image(image_bytes: bytes) -> bytes:
     try:

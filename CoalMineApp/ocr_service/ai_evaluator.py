@@ -2,8 +2,14 @@ import os
 import json
 from groq import Groq
 
-# Initialize client with your key
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
+# API key must be set via the GROQ_API_KEY environment variable.
+# Set it in your .env file (local) or the Render/Railway dashboard (cloud).
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    raise EnvironmentError(
+        "GROQ_API_KEY environment variable is not set. "
+        "Add it to your .env file or cloud hosting dashboard."
+    )
 client = Groq(api_key=GROQ_API_KEY)
 
 def predict_hazard_compliance(hazard_text: str) -> dict:
@@ -25,7 +31,7 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
 
     try:
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Hazard Observation: {hazard_text}"}
@@ -78,7 +84,7 @@ def generate_eod_report(hazards_list: list) -> dict:
 
     try:
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Today's Hazards:\n{hazards_text}"}

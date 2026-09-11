@@ -1,0 +1,36 @@
+# render.yaml — Render Blueprint
+# This file lets Render auto-configure BOTH services from one GitHub push.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # ── Service 1: Python AI / OCR Microservice ──────────────────────────────
+  - type: web
+    name: coal-mine-ocr
+    runtime: python
+    rootDir: ocr_service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false          # You will paste this manually in the Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false          # You will paste this manually in the Render dashboard
+
+  # ── Service 2: Node.js Backend + HQ Dashboard ────────────────────────────
+  - type: web
+    name: coal-mine-hq
+    runtime: node
+    rootDir: .
+    buildCommand: npm install
+    startCommand: node Server.js
+    plan: free
+    envVars:
+      - key: PYTHON_SERVICE_URL
+        fromService:
+          name: coal-mine-ocr
+          type: web
+          property: host          # Auto-fills with the Python service's URL!
+      - key: SERVER_HOST
+        sync: false               # Paste your final Render URL here after first deploy
+                                  # e.g. https://coal-mine-hq.onrender.com

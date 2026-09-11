@@ -2,7 +2,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+
+
 const http = require('http');
 const { Server } = require('socket.io');
 const z = require('zod');
@@ -16,7 +17,7 @@ const io = new Server(server, {
   }
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // Setup Socket.IO connection event
 io.on('connection', (socket) => {
@@ -159,8 +160,8 @@ app.post('/api/hazards', async (req, res) => {
     try {
       const combinedText = `${hazard.hazard_type}. ${hazard.description}`;
       console.log(`Sending live hazard to Groq AI Engine for prediction...`);
-      
-      const aiResponse = await fetch('http://127.0.0.1:8000/api/ai/predict', {
+      const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+      const aiResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ai/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: combinedText })
@@ -196,8 +197,9 @@ app.post('/api/hazards', async (req, res) => {
 
     const lat = hazard.latitude ? Number(hazard.latitude).toFixed(5) : 'N/A';
     const lon = hazard.longitude ? Number(hazard.longitude).toFixed(5) : 'N/A';
+    const serverHost = process.env.SERVER_HOST || `http://localhost:${PORT}`;
     const photoUrl = savedImageFilename
-      ? `http://localhost:${PORT}/uploads/${savedImageFilename}`
+      ? `${serverHost}/uploads/${savedImageFilename}`
       : 'No Image Attached';
 
     console.clear();
@@ -256,7 +258,8 @@ app.get('/api/hazards', (req, res) => {
 app.get('/api/generate-report', async (req, res) => {
   try {
     console.log("Generating End of Day Report via AI...");
-    const aiResponse = await fetch('http://127.0.0.1:8000/api/ai/report', {
+    const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+    const aiResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ai/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hazards: centralLedger })
@@ -297,7 +300,8 @@ app.post('/api/legacy-documents', async (req, res) => {
     formData.append('file', blob, filename);
 
     console.log(`Sending image ${filename} to OCR microservice...`);
-    const ocrResponse = await fetch('http://127.0.0.1:8000/api/ocr/extract', {
+    const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+    const ocrResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ocr/extract`, {
       method: 'POST',
       body: formData
     });
@@ -362,44 +366,12 @@ app.post('/api/legacy-documents', async (req, res) => {
   }
 });
 
-// Start the Python OCR Microservice automatically
-const pythonExecutable = path.join(__dirname, 'ocr_service', 'venv', 'Scripts', 'python.exe');
-const pythonScript = path.join(__dirname, 'ocr_service', 'main.py');
-
-console.log("Starting Python OCR Microservice...");
-const ocrProcess = spawn(pythonExecutable, [pythonScript], {
-  cwd: __dirname
-});
-
-ocrProcess.stdout.on('data', (data) => {
-  process.stdout.write(`[OCR Service]: ${data}`);
-});
-
-ocrProcess.stderr.on('data', (data) => {
-  process.stderr.write(`[OCR Service Error]: ${data}`);
-});
-
-ocrProcess.on('close', (code) => {
-  console.log(`[OCR Service] exited with code ${code}`);
-});
+// NOTE: The Python OCR Microservice is deployed as a SEPARATE cloud service.
+// Set the PYTHON_SERVICE_URL environment variable in your hosting dashboard.
+// For local development, start it manually: cd ocr_service && uvicorn main:app --port 8000
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n✅ Headquarters Server running on port ${PORT}`);
+  console.log(`Python AI Service URL: ${process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000 (local default)'}`);
   console.log(`Ready to receive and save field hazard photos...\n`);
-});
-
-// Clean up Python process on exit to prevent zombie processes on port 8000
-const cleanup = () => {
-  if (ocrProcess && !ocrProcess.killed) {
-    ocrProcess.kill('SIGINT');
-  }
-  process.exit();
-};
-
-process.on('SIGINT', cleanup);
-process.on('SIGTERM', cleanup);
-process.on('exit', () => {
-  if (ocrProcess && !ocrProcess.killed) {
-    ocrProcess.kill('SIGINT');
-  }
 });

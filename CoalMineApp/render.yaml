@@ -7,7 +7,7 @@ services:
   - type: web
     name: coal-mine-ocr
     runtime: python
-    rootDir: ocr_service
+    rootDir: CoalMineApp/ocr_service
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
@@ -16,12 +16,14 @@ services:
         sync: false          # You will paste this manually in the Render dashboard
       - key: GEMINI_API_KEY
         sync: false          # You will paste this manually in the Render dashboard
+      - key: PYTHON_VERSION
+        value: 3.11.8
 
   # ── Service 2: Node.js Backend + HQ Dashboard ────────────────────────────
   - type: web
     name: coal-mine-hq
     runtime: node
-    rootDir: .
+    rootDir: CoalMineApp
     buildCommand: npm install
     startCommand: node Server.js
     plan: free
@@ -34,3 +36,4 @@ services:
       - key: SERVER_HOST
         sync: false               # Paste your final Render URL here after first deploy
                                   # e.g. https://coal-mine-hq.onrender.com
+

@@ -191,6 +191,10 @@ app.post('/api/hazards', async (req, res) => {
       saved_image: savedImageFilename,
       received_at: new Date().toISOString()
     };
+    
+    // Remove the massive base64 string so it doesn't crash server-to-server requests
+    delete hazardEntry.image_uri;
+
     centralLedger.push(hazardEntry);
     
     saveData(LIVE_HAZARDS_FILE, centralLedger);

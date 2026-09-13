@@ -11,6 +11,8 @@
     --border-color: rgba(255, 255, 255, 0.1);
 }
 
+
+
 * {
     margin: 0;
     padding: 0;
@@ -395,3 +397,5 @@ pre {
 .leaflet-popup-content { margin: 16px; }
 .leaflet-popup-content img { width: 100%; border-radius: 6px; margin-top: 8px; }
 .leaflet-container a.leaflet-popup-close-button { color: var(--text-secondary); }
+
+

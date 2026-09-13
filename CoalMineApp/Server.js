@@ -16,7 +16,8 @@ const io = new Server(server, {
   }
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
 
 // Setup Socket.IO connection event
 io.on('connection', (socket) => {
@@ -160,7 +161,7 @@ app.post('/api/hazards', async (req, res) => {
       const combinedText = `${hazard.hazard_type}. ${hazard.description}`;
       console.log(`Sending live hazard to Groq AI Engine for prediction...`);
       
-      const aiResponse = await fetch('http://127.0.0.1:8000/api/ai/predict', {
+      const aiResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ai/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: combinedText })
@@ -256,7 +257,7 @@ app.get('/api/hazards', (req, res) => {
 app.get('/api/generate-report', async (req, res) => {
   try {
     console.log("Generating End of Day Report via AI...");
-    const aiResponse = await fetch('http://127.0.0.1:8000/api/ai/report', {
+    const aiResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ai/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hazards: centralLedger })
@@ -297,7 +298,7 @@ app.post('/api/legacy-documents', async (req, res) => {
     formData.append('file', blob, filename);
 
     console.log(`Sending image ${filename} to OCR microservice...`);
-    const ocrResponse = await fetch('http://127.0.0.1:8000/api/ocr/extract', {
+    const ocrResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ocr/extract`, {
       method: 'POST',
       body: formData
     });
@@ -362,26 +363,32 @@ app.post('/api/legacy-documents', async (req, res) => {
   }
 });
 
-// Start the Python OCR Microservice automatically
-const pythonExecutable = path.join(__dirname, 'ocr_service', 'venv', 'Scripts', 'python.exe');
-const pythonScript = path.join(__dirname, 'ocr_service', 'main.py');
+// Start the Python OCR Microservice automatically (Local Development Only)
+let ocrProcess = null;
 
-console.log("Starting Python OCR Microservice...");
-const ocrProcess = spawn(pythonExecutable, [pythonScript], {
-  cwd: __dirname
-});
+if (process.env.NODE_ENV !== 'production') {
+  const pythonExecutable = path.join(__dirname, 'ocr_service', 'venv', 'Scripts', 'python.exe');
+  const pythonScript = path.join(__dirname, 'ocr_service', 'main.py');
 
-ocrProcess.stdout.on('data', (data) => {
-  process.stdout.write(`[OCR Service]: ${data}`);
-});
+  console.log("Starting Python OCR Microservice locally...");
+  ocrProcess = spawn(pythonExecutable, [pythonScript], {
+    cwd: __dirname
+  });
 
-ocrProcess.stderr.on('data', (data) => {
-  process.stderr.write(`[OCR Service Error]: ${data}`);
-});
+  ocrProcess.stdout.on('data', (data) => {
+    process.stdout.write(`[OCR Service]: ${data}`);
+  });
 
-ocrProcess.on('close', (code) => {
-  console.log(`[OCR Service] exited with code ${code}`);
-});
+  ocrProcess.stderr.on('data', (data) => {
+    process.stderr.write(`[OCR Service Error]: ${data}`);
+  });
+
+  ocrProcess.on('close', (code) => {
+    console.log(`[OCR Service] exited with code ${code}`);
+  });
+} else {
+  console.log(`Running in production mode. Expecting Python service at ${PYTHON_SERVICE_URL}`);
+}
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n✅ Headquarters Server running on port ${PORT}`);

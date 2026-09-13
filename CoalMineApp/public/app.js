@@ -253,11 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 eodReportContainer.classList.remove('hidden');
             } else {
-                alert("Failed to generate AI report.");
+                alert("Failed to generate AI report.\nDetails: " + (data.details || data.error || "Unknown error"));
             }
         } catch (error) {
             console.error("Report generation error:", error);
-            alert("Error contacting AI server.");
+            alert("Error contacting AI server: " + error.message);
         } finally {
             reportLoader.classList.add('hidden');
             generateReportBtn.disabled = false;

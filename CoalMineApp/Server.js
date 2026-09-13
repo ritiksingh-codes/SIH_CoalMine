@@ -282,8 +282,8 @@ app.get('/api/generate-report', async (req, res) => {
     const result = await aiResponse.json();
     res.json(result);
   } catch (error) {
-    console.error("[REPORT ERROR]", error.message);
-    res.status(500).json({ error: "Failed to generate report" });
+    console.error("[REPORT ERROR]", error.message, error.stack);
+    res.status(500).json({ error: "Failed to generate report", details: error.message });
   }
 });
 

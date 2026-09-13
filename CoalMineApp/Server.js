@@ -2,6 +2,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
 
 const http = require('http');
@@ -164,14 +165,13 @@ app.post('/api/hazards', async (req, res) => {
       if (!PYTHON_SERVICE_URL.startsWith('http')) {
         PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
       }
-      const aiResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ai/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: combinedText })
+      
+      const aiResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ai/predict`, { text: combinedText }, {
+        headers: { 'Content-Type': 'application/json' }
       });
       
-      if (aiResponse.ok) {
-        const aiData = await aiResponse.json();
+      if (aiResponse.status === 200) {
+        const aiData = aiResponse.data;
         if (aiData.success && aiData.ai_compliance) {
           aiCompliance = aiData.ai_compliance;
           console.log(`[AI PREDICTION RECEIVED] Severity: ${aiCompliance.severity}`);
@@ -269,17 +269,16 @@ app.get('/api/generate-report', async (req, res) => {
     if (!PYTHON_SERVICE_URL.startsWith('http')) {
       PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
     }
-    const aiResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ai/report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hazards: centralLedger })
+    
+    const aiResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ai/report`, { hazards: centralLedger }, {
+      headers: { 'Content-Type': 'application/json' }
     });
     
-    if (!aiResponse.ok) {
+    if (aiResponse.status !== 200) {
       throw new Error("AI microservice failed to generate report.");
     }
     
-    const result = await aiResponse.json();
+    const result = aiResponse.data;
     res.json(result);
   } catch (error) {
     console.error("[REPORT ERROR]", error.message, error.stack);
@@ -314,16 +313,16 @@ app.post('/api/legacy-documents', async (req, res) => {
     if (!PYTHON_SERVICE_URL.startsWith('http')) {
       PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
     }
-    const ocrResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ocr/extract`, {
-      method: 'POST',
-      body: formData
+    
+    const ocrResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ocr/extract`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     });
 
-    if (!ocrResponse.ok) {
+    if (ocrResponse.status !== 200) {
       throw new Error(`OCR service failed with status ${ocrResponse.status}`);
     }
 
-    const ocrResult = await ocrResponse.json();
+    const ocrResult = ocrResponse.data;
 
     console.clear();
     console.log("==========================================================");

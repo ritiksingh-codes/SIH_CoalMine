@@ -160,7 +160,10 @@ app.post('/api/hazards', async (req, res) => {
     try {
       const combinedText = `${hazard.hazard_type}. ${hazard.description}`;
       console.log(`Sending live hazard to Groq AI Engine for prediction...`);
-      const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+      let PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+      if (!PYTHON_SERVICE_URL.startsWith('http')) {
+        PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
+      }
       const aiResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ai/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -262,7 +265,10 @@ app.get('/api/hazards', (req, res) => {
 app.get('/api/generate-report', async (req, res) => {
   try {
     console.log("Generating End of Day Report via AI...");
-    const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+    let PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+    if (!PYTHON_SERVICE_URL.startsWith('http')) {
+      PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
+    }
     const aiResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ai/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -304,7 +310,10 @@ app.post('/api/legacy-documents', async (req, res) => {
     formData.append('file', blob, filename);
 
     console.log(`Sending image ${filename} to OCR microservice...`);
-    const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+    let PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+    if (!PYTHON_SERVICE_URL.startsWith('http')) {
+      PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
+    }
     const ocrResponse = await fetch(`${PYTHON_SERVICE_URL}/api/ocr/extract`, {
       method: 'POST',
       body: formData

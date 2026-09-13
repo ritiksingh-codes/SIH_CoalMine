@@ -36,7 +36,13 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
     }
 
     if not client:
-        raise ValueError("GEMINI_API_KEY is missing. Please set it in the environment.")
+        return {
+            "severity": "UNKNOWN",
+            "category": "Unclassified",
+            "statutory_violation": False,
+            "dgms_regulation_tag": "N/A",
+            "recommended_action": "Error contacting AI prediction engine: GEMINI_API_KEY is missing."
+        }
 
     try:
         response = client.models.generate_content(
@@ -103,7 +109,12 @@ def generate_eod_report(hazards_list: list) -> dict:
     hazards_text = "\n".join(simplified_hazards)
 
     if not client:
-        raise ValueError("GEMINI_API_KEY is missing. Please set it in the environment.")
+        return {
+            "safety_rating": "UNKNOWN",
+            "executive_summary": "Error generating report: GEMINI_API_KEY is missing. Please set it in the environment.",
+            "key_trends": ["N/A"],
+            "action_items": ["N/A"]
+        }
 
     try:
         response = client.models.generate_content(

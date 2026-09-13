@@ -10,9 +10,9 @@ load_dotenv(os.path.join(_service_dir, '.env'))         # ocr_service/.env
 load_dotenv(os.path.join(_service_dir, '..', '.env'))   # project root .env (fallback)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise EnvironmentError("GEMINI_API_KEY environment variable is not set.")
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = None
+if GEMINI_API_KEY:
+    client = genai.Client(api_key=GEMINI_API_KEY)
 
 def predict_hazard_compliance(hazard_text: str) -> dict:
     """
@@ -35,9 +35,12 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
         }
     }
 
+    if not client:
+        raise ValueError("GEMINI_API_KEY is missing. Please set it in the environment.")
+
     try:
         response = client.models.generate_content(
-            model='gemini-3.6-flash',
+            model='gemini-2.0-flash',
             contents=f"Hazard Observation: {hazard_text}",
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
@@ -99,9 +102,12 @@ def generate_eod_report(hazards_list: list) -> dict:
     
     hazards_text = "\n".join(simplified_hazards)
 
+    if not client:
+        raise ValueError("GEMINI_API_KEY is missing. Please set it in the environment.")
+
     try:
         response = client.models.generate_content(
-            model='gemini-3.6-flash',
+            model='gemini-2.0-flash',
             contents=f"Today's Hazards:\n{hazards_text}",
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,

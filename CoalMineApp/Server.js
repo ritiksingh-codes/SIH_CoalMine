@@ -9,6 +9,18 @@ const http = require('http');
 const { Server } = require('socket.io');
 const z = require('zod');
 
+function getPythonServiceUrl() {
+  let url = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+  if (!url.startsWith('http')) {
+    if (url.includes('.')) {
+      url = 'https://' + url;
+    } else {
+      url = 'http://' + url + ':10000';
+    }
+  }
+  return url;
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -161,10 +173,7 @@ app.post('/api/hazards', async (req, res) => {
     try {
       const combinedText = `${hazard.hazard_type}. ${hazard.description}`;
       console.log(`Sending live hazard to Groq AI Engine for prediction...`);
-      let PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
-      if (!PYTHON_SERVICE_URL.startsWith('http')) {
-        PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
-      }
+      const PYTHON_SERVICE_URL = getPythonServiceUrl();
       
       const aiResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ai/predict`, { text: combinedText }, {
         headers: { 'Content-Type': 'application/json' }
@@ -265,10 +274,7 @@ app.get('/api/hazards', (req, res) => {
 app.get('/api/generate-report', async (req, res) => {
   try {
     console.log("Generating End of Day Report via AI...");
-    let PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
-    if (!PYTHON_SERVICE_URL.startsWith('http')) {
-      PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
-    }
+    const PYTHON_SERVICE_URL = getPythonServiceUrl();
     
     const aiResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ai/report`, { hazards: centralLedger }, {
       headers: { 'Content-Type': 'application/json' }
@@ -309,10 +315,7 @@ app.post('/api/legacy-documents', async (req, res) => {
     formData.append('file', blob, filename);
 
     console.log(`Sending image ${filename} to OCR microservice...`);
-    let PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
-    if (!PYTHON_SERVICE_URL.startsWith('http')) {
-      PYTHON_SERVICE_URL = 'https://' + PYTHON_SERVICE_URL;
-    }
+    const PYTHON_SERVICE_URL = getPythonServiceUrl();
     
     const ocrResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ocr/extract`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }

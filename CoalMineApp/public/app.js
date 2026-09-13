@@ -30,11 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Default center roughly on a coal region in India (e.g., Dhanbad)
     const map = L.map('map').setView([23.7957, 86.4304], 6);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Default to OpenStreetMap (free, no API key required)
+    let currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     const markers = L.layerGroup().addTo(map);
+
+
 
     // --- Chart.js Initialization ---
     let severityChart;

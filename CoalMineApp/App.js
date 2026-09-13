@@ -28,6 +28,8 @@ const SERVER_BASE_URL = process.env.EXPO_PUBLIC_SERVER_URL || 'http://localhost:
 const socket = io(SERVER_BASE_URL);
 
 export default function App() {
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const styles = isDarkMode ? darkStyles : lightStyles;
   const [hazardType, setHazardType] = useState('');
   const [severity, setSeverity] = useState('HIGH');
   const [description, setDescription] = useState('');
@@ -197,16 +199,28 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
 
-      {/* Network Connectivity Banner */}
-      <View style={[styles.networkBanner, isOnline ? styles.bannerOnline : styles.bannerOffline]}>
-        <Text style={styles.bannerText}>
-          {isOnline 
-            ? `🟢 ONLINE (${connectionType.toUpperCase()}) - Auto-Sync Active` 
-            : '🔴 OFFLINE (-300m Pit Mode) - Saving to SQLite'}
-        </Text>
+      {/* Theme & Status Badges Row */}
+      <View style={styles.statusRow}>
+        <TouchableOpacity 
+          style={[styles.pillBadge, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+          onPress={() => setIsDarkMode(!isDarkMode)}
+        >
+          <Text style={styles.pillText}>{isDarkMode ? '☀️' : '🌙'}</Text>
+        </TouchableOpacity>
+
+        <View style={[styles.pillBadge, isOnline ? styles.pillOnline : styles.pillOffline]}>
+          <Text style={styles.pillText}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
+        </View>
+        
+        <TouchableOpacity 
+          style={[styles.pillBadge, location ? styles.pillGpsOn : styles.pillGpsOff]}
+          onPress={!location ? fetchCurrentLocation : null}
+        >
+          <Text style={styles.pillText}>{locLoading ? '🛰️ Locating...' : (location ? '📍 GPS' : '⚠️ Retry GPS')}</Text>
+        </TouchableOpacity>
       </View>
       
       {/* Real-time Full Screen Danger Modal */}
@@ -248,20 +262,7 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* GPS Status Banner */}
-      <View style={styles.gpsBanner}>
-        {locLoading ? (
-          <Text style={styles.gpsText}>🛰️ Locking GPS satellites...</Text>
-        ) : location ? (
-          <Text style={styles.gpsText}>
-            📍 GPS Lock: {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
-          </Text>
-        ) : (
-          <TouchableOpacity onPress={fetchCurrentLocation}>
-            <Text style={[styles.gpsText, { color: '#dc2626' }]}>⚠️ GPS Disabled. Tap to Retry</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+
 
       <Text style={styles.header}>⛏️ Coal Mine Field System</Text>
       <Text style={styles.subHeader}>Statutory GPS Compliance Module</Text>
@@ -308,8 +309,8 @@ export default function App() {
         <View>
           <TextInput
             style={styles.input}
-            placeholder="Hazard Type (e.g., Loose Overburden)"
-            placeholderTextColor="#888"
+            placeholder="Hazard Type (e.g., Methane Gas Leaking)"
+            placeholderTextColor={isDarkMode ? "#94a3b8" : "#64748b"}
             value={hazardType}
             onChangeText={setHazardType}
           />
@@ -317,15 +318,15 @@ export default function App() {
           <TextInput
             style={styles.input}
             placeholder="Severity (LOW, MEDIUM, HIGH, CRITICAL)"
-            placeholderTextColor="#888"
+            placeholderTextColor={isDarkMode ? "#94a3b8" : "#64748b"}
             value={severity}
             onChangeText={setSeverity}
           />
 
           <TextInput
-            style={[styles.input, { height: 50 }]}
+            style={[styles.input, { height: 80 }]}
             placeholder="Description / Location specifics..."
-            placeholderTextColor="#888"
+            placeholderTextColor={isDarkMode ? "#94a3b8" : "#64748b"}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -337,18 +338,18 @@ export default function App() {
               <View style={styles.previewBox}>
                 <Image source={{ uri: photoUri }} style={styles.imageThumbnail} />
                 <TouchableOpacity style={styles.retakeBtn} onPress={handleCapturePhoto}>
-                  <Text style={styles.retakeBtnText}>Retake 📷</Text>
+                  <Text style={styles.retakeBtnText}>Retake</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity style={styles.cameraBtn} onPress={handleCapturePhoto}>
-                <Text style={styles.cameraBtnText}>📸 Take Mandatory Hazard Photo</Text>
+                <Text style={styles.cameraBtnText}>📷 Take Photo</Text>
               </TouchableOpacity>
             )}
           </View>
 
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-            <Text style={styles.btnText}>💾 Save Time-Stamped Hazard</Text>
+            <Text style={styles.btnText}>Save Hazard</Text>
           </TouchableOpacity>
 
           <Text style={styles.listHeading}>Recorded Observations ({hazardsList.length})</Text>
@@ -388,52 +389,76 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 45, backgroundColor: '#f8fafc' },
+const darkStyles = StyleSheet.create({
+  container: { flex: 1, paddingTop: 45, backgroundColor: '#0f172a' },
   scrollContent: { padding: 20, paddingBottom: 100 },
-  networkBanner: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, marginBottom: 6, alignItems: 'center' },
-  bannerOnline: { backgroundColor: '#dcfce7', borderWidth: 1, borderColor: '#86efac' },
-  bannerOffline: { backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fca5a5' },
-  bannerText: { fontSize: 11, fontWeight: 'bold', color: '#1f2937' },
-  gpsBanner: { backgroundColor: '#e0f2fe', paddingVertical: 5, paddingHorizontal: 12, borderRadius: 6, marginBottom: 8, alignItems: 'center', borderWidth: 1, borderColor: '#bae6fd' },
-  gpsText: { fontSize: 11, fontWeight: '600', color: '#0369a1' },
-  header: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
-  subHeader: { fontSize: 11, color: '#6b7280', marginBottom: 10 },
-  input: { backgroundColor: '#ffffff', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#cbd5e1', marginBottom: 15, fontSize: 16 },
-  roleContainer: { flexDirection: 'row', marginBottom: 20, backgroundColor: '#e2e8f0', borderRadius: 8, padding: 4 },
-  roleBtn: { flex: 1, padding: 10, alignItems: 'center', borderRadius: 6 },
-  roleBtnActive: { backgroundColor: '#3b82f6' },
-  roleText: { fontSize: 14, fontWeight: 'bold', color: '#64748b' },
-  roleTextActive: { color: '#fff' },
-  workerDashboard: { backgroundColor: '#dbeafe', padding: 30, borderRadius: 12, alignItems: 'center', marginBottom: 20, borderWidth: 2, borderColor: '#bfdbfe' },
-  workerDashboardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e3a8a', textAlign: 'center', marginBottom: 10 },
-  workerDashboardSub: { fontSize: 14, color: '#3b82f6', textAlign: 'center' },
-  meshControlContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 10, backgroundColor: '#fff', borderRadius: 8, marginBottom: 10 },
-  meshControlText: { fontSize: 13, fontWeight: '600' },
-  p2pDemoBtn: { backgroundColor: '#8b5cf6', padding: 15, borderRadius: 8, alignItems: 'center', marginBottom: 20 },
-  p2pDemoText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  photoContainer: { marginVertical: 6 },
-  cameraBtn: { backgroundColor: '#0284c7', padding: 10, borderRadius: 6, alignItems: 'center' },
-  cameraBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 13 },
-  previewBox: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  imageThumbnail: { width: 50, height: 50, borderRadius: 6, borderWidth: 1, borderColor: '#ccc' },
-  retakeBtn: { backgroundColor: '#64748b', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
-  retakeBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  saveBtn: { backgroundColor: '#b91c1c', padding: 10, borderRadius: 6, alignItems: 'center', marginTop: 6, marginBottom: 12 },
-  btnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 13 },
-  listHeading: { fontSize: 14, fontWeight: 'bold', color: '#374151', marginBottom: 6 },
-  card: { backgroundColor: '#ffffff', padding: 10, borderRadius: 6, marginBottom: 8, borderWidth: 1, borderColor: '#e5e7eb', flexDirection: 'row', gap: 10 },
-  cardImage: { width: 65, height: 65, borderRadius: 4 },
-  cardTitle: { fontSize: 13, fontWeight: 'bold', color: '#111827' },
-  cardDesc: { fontSize: 11, color: '#4b5563', marginVertical: 2 },
-  coordText: { fontSize: 10, color: '#0369a1', fontFamily: 'monospace' },
-  timeText: { fontSize: 10, color: '#6b7280' },
-  pendingTag: { fontSize: 10, fontWeight: 'bold', color: '#c2410c', marginTop: 2 },
-  syncedTag: { fontSize: 10, fontWeight: 'bold', color: '#15803d', marginTop: 2 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { backgroundColor: '#ef4444', padding: 25, borderRadius: 12, width: '85%', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 },
+  statusRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 20 },
+  pillBadge: { paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 },
+  pillOnline: { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
+  pillOffline: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' },
+  pillGpsOn: { backgroundColor: 'rgba(59, 130, 246, 0.15)', borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)' },
+  pillGpsOff: { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)' },
+  pillText: { fontSize: 12, fontWeight: '600', color: '#e2e8f0' },
+  header: { fontSize: 22, fontWeight: 'bold', color: '#f8fafc', display: 'none' },
+  subHeader: { fontSize: 11, color: '#94a3b8', marginBottom: 10, display: 'none' },
+  input: { backgroundColor: '#1e293b', padding: 14, borderRadius: 10, marginBottom: 15, fontSize: 15, color: '#f8fafc' },
+  roleContainer: { flexDirection: 'row', marginBottom: 24, backgroundColor: '#1e293b', borderRadius: 24, padding: 4 },
+  roleBtn: { flex: 1, padding: 12, alignItems: 'center', borderRadius: 20 },
+  roleBtnActive: { backgroundColor: '#475569' },
+  roleText: { fontSize: 13, fontWeight: '600', color: '#64748b' },
+  roleTextActive: { color: '#f8fafc' },
+  workerDashboard: { backgroundColor: '#1e293b', padding: 30, borderRadius: 12, alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: '#334155' },
+  workerDashboardTitle: { fontSize: 18, fontWeight: 'bold', color: '#e2e8f0', textAlign: 'center', marginBottom: 10 },
+  workerDashboardSub: { fontSize: 14, color: '#94a3b8', textAlign: 'center' },
+  meshControlContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, backgroundColor: '#1e293b', borderRadius: 10, marginBottom: 15 },
+  meshControlText: { fontSize: 13, fontWeight: '600', color: '#e2e8f0' },
+  p2pDemoBtn: { backgroundColor: '#3b82f6', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 20 },
+  p2pDemoText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  photoContainer: { marginVertical: 8 },
+  cameraBtn: { backgroundColor: '#475569', padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  cameraBtnText: { color: '#f8fafc', fontWeight: '600', fontSize: 14 },
+  previewBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#1e293b', padding: 10, borderRadius: 10 },
+  imageThumbnail: { width: 60, height: 60, borderRadius: 8 },
+  retakeBtn: { backgroundColor: '#334155', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6 },
+  retakeBtnText: { color: '#e2e8f0', fontSize: 13, fontWeight: '600' },
+  saveBtn: { backgroundColor: '#dc2626', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 12, marginBottom: 24, shadowColor: '#dc2626', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  btnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 15 },
+  listHeading: { fontSize: 13, fontWeight: '600', color: '#94a3b8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  card: { backgroundColor: '#1e293b', padding: 14, borderRadius: 12, marginBottom: 12, flexDirection: 'row', gap: 12 },
+  cardImage: { width: 70, height: 70, borderRadius: 8 },
+  cardTitle: { fontSize: 14, fontWeight: 'bold', color: '#f8fafc' },
+  cardDesc: { fontSize: 12, color: '#cbd5e1', marginVertical: 4 },
+  coordText: { fontSize: 11, color: '#3b82f6', fontFamily: 'monospace' },
+  timeText: { fontSize: 10, color: '#64748b', marginTop: 4 },
+  pendingTag: { fontSize: 10, fontWeight: 'bold', color: '#fbbf24', marginTop: 6 },
+  syncedTag: { fontSize: 10, fontWeight: 'bold', color: '#10b981', marginTop: 6 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#991b1b', padding: 25, borderRadius: 16, width: '85%', alignItems: 'center', shadowColor: '#ef4444', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 15, elevation: 10, borderWidth: 1, borderColor: '#f87171' },
   modalTitle: { fontSize: 22, fontWeight: 'bold', color: 'white', marginBottom: 15, textAlign: 'center' },
-  modalMessage: { fontSize: 16, color: 'white', textAlign: 'center', marginBottom: 25, lineHeight: 22 },
-  modalButton: { backgroundColor: 'white', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center' },
-  modalButtonText: { color: '#ef4444', fontWeight: 'bold', fontSize: 16 },
+  modalMessage: { fontSize: 16, color: '#fee2e2', textAlign: 'center', marginBottom: 25, lineHeight: 24 },
+  modalButton: { backgroundColor: 'white', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 10, width: '100%', alignItems: 'center' },
+  modalButtonText: { color: '#991b1b', fontWeight: 'bold', fontSize: 16 },
+});
+
+const lightStyles = StyleSheet.create({
+  ...darkStyles,
+  container: { flex: 1, paddingTop: 45, backgroundColor: '#f8fafc' },
+  pillText: { fontSize: 12, fontWeight: '600', color: '#334155' },
+  input: { backgroundColor: '#ffffff', padding: 14, borderRadius: 10, marginBottom: 15, fontSize: 15, color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0' },
+  roleContainer: { flexDirection: 'row', marginBottom: 24, backgroundColor: '#e2e8f0', borderRadius: 24, padding: 4 },
+  roleBtnActive: { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  roleTextActive: { color: '#0f172a' },
+  workerDashboard: { backgroundColor: '#ffffff', padding: 30, borderRadius: 12, alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: '#e2e8f0' },
+  workerDashboardTitle: { fontSize: 18, fontWeight: 'bold', color: '#0f172a', textAlign: 'center', marginBottom: 10 },
+  meshControlContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, backgroundColor: '#ffffff', borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#e2e8f0' },
+  meshControlText: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
+  cameraBtn: { backgroundColor: '#e2e8f0', padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  cameraBtnText: { color: '#334155', fontWeight: '600', fontSize: 14 },
+  previewBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#ffffff', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' },
+  retakeBtn: { backgroundColor: '#e2e8f0', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6 },
+  retakeBtnText: { color: '#334155', fontSize: 13, fontWeight: '600' },
+  listHeading: { fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  card: { backgroundColor: '#ffffff', padding: 14, borderRadius: 12, marginBottom: 12, flexDirection: 'row', gap: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  cardTitle: { fontSize: 14, fontWeight: 'bold', color: '#0f172a' },
+  cardDesc: { fontSize: 12, color: '#475569', marginVertical: 4 },
 });

@@ -14,6 +14,8 @@ function getPythonServiceUrl() {
   if (!url.startsWith('http')) {
     if (url.includes('.')) {
       url = 'https://' + url;
+    } else if (url === 'coal-mine-ocr') {
+      url = 'https://coal-mine-ocr.onrender.com';
     } else {
       url = 'http://' + url + ':10000';
     }

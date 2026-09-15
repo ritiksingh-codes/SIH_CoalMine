@@ -40,7 +40,7 @@ async def extract_form(file: UploadFile = File(...)):
     }
 
 @app.post("/api/ai/predict")
-async def predict_hazard(request: PredictRequest):
+def predict_hazard(request: PredictRequest):
     ai_prediction = predict_hazard_compliance(request.text)
     return {
         "success": True,
@@ -48,7 +48,7 @@ async def predict_hazard(request: PredictRequest):
     }
 
 @app.post("/api/ai/report")
-async def generate_report(request: ReportRequest):
+def generate_report(request: ReportRequest):
     report = generate_eod_report(request.hazards)
     return {
         "success": True,

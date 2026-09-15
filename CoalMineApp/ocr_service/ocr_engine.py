@@ -63,7 +63,7 @@ def process_legacy_document(image_bytes: bytes) -> dict:
         }
         
         response = client.models.generate_content(
-            model='gemini-flash-lite-latest',
+            model='gemini-3.5-flash-lite',
             contents=[image_part, prompt],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

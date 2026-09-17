@@ -177,11 +177,26 @@ app.post('/api/hazards', async (req, res) => {
       console.log(`Sending live hazard to Groq AI Engine for prediction...`);
       const PYTHON_SERVICE_URL = getPythonServiceUrl();
       
-      const aiResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ai/predict`, { text: combinedText }, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      let aiResponse;
+      let retries = 6;
+      while (retries > 0) {
+        try {
+          aiResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ai/predict`, { text: combinedText }, {
+            headers: { 'Content-Type': 'application/json' }
+          });
+          break;
+        } catch (err) {
+          if (err.response && (err.response.status === 502 || err.response.status === 504) && retries > 1) {
+            retries--;
+            console.log(`[AI PREDICT] Cold start detected. Retrying in 8s... (${retries} left)`);
+            await new Promise(res => setTimeout(res, 8000));
+          } else {
+            throw err;
+          }
+        }
+      }
       
-      if (aiResponse.status === 200) {
+      if (aiResponse && aiResponse.status === 200) {
         const aiData = aiResponse.data;
         if (aiData.success && aiData.ai_compliance) {
           aiCompliance = aiData.ai_compliance;
@@ -278,19 +293,38 @@ app.get('/api/generate-report', async (req, res) => {
     console.log("Generating End of Day Report via AI...");
     const PYTHON_SERVICE_URL = getPythonServiceUrl();
     
-    const aiResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ai/report`, { hazards: centralLedger }, {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    let aiResponse;
+    let retries = 6;
+    while (retries > 0) {
+      try {
+        aiResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ai/report`, { hazards: centralLedger }, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 60000
+        });
+        break;
+      } catch (err) {
+        if (err.response && (err.response.status === 502 || err.response.status === 504) && retries > 1) {
+          retries--;
+          console.log(`[EOD REPORT] Cold start detected. Retrying in 8s... (${retries} left)`);
+          await new Promise(res => setTimeout(res, 8000));
+        } else {
+          throw err;
+        }
+      }
+    }
     
     if (aiResponse.status !== 200) {
-      throw new Error("AI microservice failed to generate report.");
+      throw new Error(`AI microservice failed with status ${aiResponse.status}`);
     }
     
     const result = aiResponse.data;
     res.json(result);
   } catch (error) {
-    console.error("[REPORT ERROR]", error.message, error.stack);
-    res.status(500).json({ error: "Failed to generate report", details: error.message });
+    console.error("[REPORT ERROR]", error.message);
+    const details = error.response && (error.response.status === 502 || error.response.status === 504) 
+      ? "AI service is waking up (cold start). Please try again in 30 seconds."
+      : error.message;
+    res.status(500).json({ error: "Failed to generate report", details: details });
   }
 });
 
@@ -319,12 +353,28 @@ app.post('/api/legacy-documents', async (req, res) => {
     console.log(`Sending image ${filename} to OCR microservice...`);
     const PYTHON_SERVICE_URL = getPythonServiceUrl();
     
-    const ocrResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ocr/extract`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    let ocrResponse;
+    let retries = 6;
+    while (retries > 0) {
+      try {
+        ocrResponse = await axios.post(`${PYTHON_SERVICE_URL}/api/ocr/extract`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 120000 // 2 mins for OCR
+        });
+        break;
+      } catch (err) {
+        if (err.response && (err.response.status === 502 || err.response.status === 504) && retries > 1) {
+          retries--;
+          console.log(`[OCR EXTRACT] Cold start detected. Retrying in 8s... (${retries} left)`);
+          await new Promise(res => setTimeout(res, 8000));
+        } else {
+          throw err;
+        }
+      }
+    }
 
-    if (ocrResponse.status !== 200) {
-      throw new Error(`OCR service failed with status ${ocrResponse.status}`);
+    if (!ocrResponse || ocrResponse.status !== 200) {
+      throw new Error(`OCR service failed with status ${ocrResponse ? ocrResponse.status : 'Unknown'}`);
     }
 
     const ocrResult = ocrResponse.data;
@@ -379,7 +429,10 @@ app.post('/api/legacy-documents', async (req, res) => {
 
   } catch (error) {
     console.error("OCR Error:", error.message);
-    res.status(500).json({ error: "Failed to process legacy document via OCR" });
+    const details = error.response && (error.response.status === 502 || error.response.status === 504)
+      ? "AI service is waking up (cold start). Please try again in 30 seconds."
+      : error.message;
+    res.status(500).json({ error: "Failed to process legacy document via OCR", details: details });
   }
 });
 

@@ -1,6 +1,6 @@
 fastapi==0.141.1
 uvicorn==0.52.4
-openai==1.52.2
+google-genai==2.22.0
 Pillow==12.3.0
 python-multipart==0.0.32
 python-dotenv==1.2.3

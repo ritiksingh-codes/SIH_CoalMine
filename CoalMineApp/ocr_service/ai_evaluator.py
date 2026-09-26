@@ -1,37 +1,46 @@
 import os
 import json
-from openai import OpenAI
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 _service_dir = os.path.dirname(__file__)
 load_dotenv(os.path.join(_service_dir, '.env'))         
 load_dotenv(os.path.join(_service_dir, '..', '.env'))   
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = None
-if OPENAI_API_KEY:
-    client = OpenAI(api_key=OPENAI_API_KEY)
+if GEMINI_API_KEY:
+    client = genai.Client(api_key=GEMINI_API_KEY)
 
 def predict_hazard_compliance(hazard_text: str) -> dict:
     if not client:
-        raise Exception("OPENAI_API_KEY is missing from environment variables.")
+        raise Exception("GEMINI_API_KEY is missing from environment variables.")
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system", 
-                "content": 'You are an automated DGMS Coal Mine Statutory Compliance Engine. Analyze the incoming observation and return ONLY valid JSON with keys: "severity" (CRITICAL, HIGH, MEDIUM, LOW), "category" (string), "statutory_violation" (boolean), "dgms_regulation_tag" (string), "recommended_action" (string).'
-            },
-            {
-                "role": "user", 
-                "content": f"Hazard Observation: {hazard_text}"
-            }
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.0
+    system_prompt = 'You are an automated DGMS Coal Mine Statutory Compliance Engine. Analyze the incoming observation and return ONLY valid JSON with keys: "severity" (CRITICAL, HIGH, MEDIUM, LOW), "category" (string), "statutory_violation" (boolean), "dgms_regulation_tag" (string), "recommended_action" (string).'
+
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "severity": {"type": "STRING"},
+            "category": {"type": "STRING"},
+            "statutory_violation": {"type": "BOOLEAN"},
+            "dgms_regulation_tag": {"type": "STRING"},
+            "recommended_action": {"type": "STRING"}
+        }
+    }
+
+    response = client.models.generate_content(
+        model='gemini-3.8-flash',
+        contents=f"Hazard Observation: {hazard_text}",
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            response_mime_type="application/json",
+            response_schema=schema,
+            temperature=0.0
+        )
     )
-    return json.loads(response.choices[0].message.content)
+    return json.loads(response.text)
 
 def generate_eod_report(hazards_list: list) -> dict:
     if not hazards_list:
@@ -42,6 +51,18 @@ def generate_eod_report(hazards_list: list) -> dict:
             "action_items": ["Maintain current safety protocols."]
         }
         
+    system_prompt = 'You are the Chief Safety Inspector for a Coal Mine. Analyze the hazards and provide an End of Day Summary. Return ONLY valid JSON with exactly these keys: "safety_rating" (A+, A, B, C, D, F), "executive_summary" (string), "key_trends" (array of strings), "action_items" (array of strings).'
+    
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "safety_rating": {"type": "STRING"},
+            "executive_summary": {"type": "STRING"},
+            "key_trends": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "action_items": {"type": "ARRAY", "items": {"type": "STRING"}}
+        }
+    }
+    
     simplified_hazards = [
         f"[{h.get('timestamp', 'Time Unknown')}] {h.get('hazard_type', 'Unknown')}: {h.get('description', '')} (Severity: {h.get('severity', 'Unknown')})"
         for h in hazards_list
@@ -49,21 +70,16 @@ def generate_eod_report(hazards_list: list) -> dict:
     hazards_text = "\n".join(simplified_hazards)
 
     if not client:
-        raise Exception("OPENAI_API_KEY is missing from environment variables.")
+        raise Exception("GEMINI_API_KEY is missing from environment variables.")
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system", 
-                "content": 'You are the Chief Safety Inspector for a Coal Mine. Analyze the hazards and provide an End of Day Summary. Return ONLY valid JSON with exactly these keys: "safety_rating" (A+, A, B, C, D, F), "executive_summary" (string), "key_trends" (array of strings), "action_items" (array of strings).'
-            },
-            {
-                "role": "user", 
-                "content": f"Today's Hazards:\n{hazards_text}"
-            }
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3
+    response = client.models.generate_content(
+        model='gemini-3.8-flash',
+        contents=f"Today's Hazards:\n{hazards_text}",
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            response_mime_type="application/json",
+            response_schema=schema,
+            temperature=0.3
+        )
     )
-    return json.loads(response.choices[0].message.content)
+    return json.loads(response.text)

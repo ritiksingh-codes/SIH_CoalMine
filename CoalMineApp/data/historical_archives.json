@@ -270,5 +270,29 @@
     },
     "saved_image": "HAZ-1788980706958.jpeg",
     "received_at": "2026-09-09T19:05:09.237Z"
+  },
+  {
+    "id": "LEGACY_test",
+    "mine_id": "PIT-ALPHA",
+    "hazard_type": "Historical Paper Record",
+    "severity": "UNKNOWN",
+    "timestamp": "14/09/2026",
+    "time": "",
+    "equipment": "",
+    "narrative": "",
+    "violations": [
+      "Crack",
+      "Loose Stone (Mock)"
+    ],
+    "ch4": "1.2%",
+    "ai_compliance": {
+      "severity": "UNKNOWN",
+      "category": "Unclassified",
+      "statutory_violation": false,
+      "dgms_regulation_tag": "N/A",
+      "recommended_action": "Error contacting AI prediction engine: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    },
+    "saved_image": "legacy_doc_test.jpeg",
+    "received_at": "2026-09-17T09:58:35.302Z"
   }
 ]

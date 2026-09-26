@@ -46,7 +46,7 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
 
     try:
         response = client.models.generate_content(
-            model='gemini-3.6-flash',
+            model='gemini-2.5-flash',
             contents=f"Hazard Observation: {hazard_text}",
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
@@ -118,7 +118,7 @@ def generate_eod_report(hazards_list: list) -> dict:
 
     try:
         response = client.models.generate_content(
-            model='gemini-3.6-flash',
+            model='gemini-2.5-flash',
             contents=f"Today's Hazards:\n{hazards_text}",
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,

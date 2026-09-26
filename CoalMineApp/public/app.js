@@ -253,23 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 eodReportContainer.classList.remove('hidden');
             } else {
-                // Render silent fallback if response was weird
-                document.getElementById('eod-rating').innerText = 'B';
-                document.getElementById('eod-rating').style.background = '#3b82f6';
-                document.getElementById('eod-summary').innerText = 'Network Interrupted. Using Cached Baseline: Safety standards are currently acceptable.';
-                document.getElementById('eod-trends').innerHTML = '<li>System running in offline cache mode</li>';
-                document.getElementById('eod-actions').innerHTML = '<li>Check internet connectivity</li>';
-                eodReportContainer.classList.remove('hidden');
+                alert("Failed to generate AI report.\nDetails: " + (data.details || data.error || "Unknown error"));
             }
         } catch (error) {
             console.error("Report generation error:", error);
-            // Render silent fallback if network completely fails (no alert!)
-            document.getElementById('eod-rating').innerText = 'B';
-            document.getElementById('eod-rating').style.background = '#3b82f6';
-            document.getElementById('eod-summary').innerText = 'Network Interrupted. Using Cached Baseline: Safety standards are currently acceptable.';
-            document.getElementById('eod-trends').innerHTML = '<li>System running in offline cache mode</li>';
-            document.getElementById('eod-actions').innerHTML = '<li>Check internet connectivity</li>';
-            eodReportContainer.classList.remove('hidden');
+            alert("Error contacting AI server: " + error.message);
         } finally {
             reportLoader.classList.add('hidden');
             generateReportBtn.disabled = false;
@@ -494,14 +482,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     resultsContainer.classList.remove('hidden');
                 } else {
-                    console.error('Error: ' + (result.error || 'Failed to process document'));
-                    jsonOutput.innerHTML = `<p style="color:#ef4444">Network error during upload. Document saved to local queue.</p>`;
-                    resultsContainer.classList.remove('hidden');
+                    alert('Error: ' + (result.error || 'Failed to process document'));
                 }
             } catch (error) {
                 console.error("Upload error:", error);
-                jsonOutput.innerHTML = `<p style="color:#ef4444">Network error during upload. Document saved to local queue.</p>`;
-                resultsContainer.classList.remove('hidden');
+                alert("An error occurred while uploading.");
             } finally {
                 // Reset UI
                 loader.classList.add('hidden');

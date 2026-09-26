@@ -31,7 +31,7 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
     }
 
     response = client.models.generate_content(
-        model='gemini-3.8-flash',
+        model='gemini-1.5-flash',
         contents=f"Hazard Observation: {hazard_text}",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
@@ -73,7 +73,7 @@ def generate_eod_report(hazards_list: list) -> dict:
         raise Exception("GEMINI_API_KEY is missing from environment variables.")
 
     response = client.models.generate_content(
-        model='gemini-3.8-flash',
+        model='gemini-1.5-flash',
         contents=f"Today's Hazards:\n{hazards_text}",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,

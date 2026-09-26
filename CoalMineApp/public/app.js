@@ -253,11 +253,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 eodReportContainer.classList.remove('hidden');
             } else {
-                alert("Failed to generate AI report.\nDetails: " + (data.details || data.error || "Unknown error"));
+                eodReportContainer.classList.remove('hidden');
+                document.getElementById('eod-rating').innerText = 'ERROR';
+                document.getElementById('eod-rating').style.background = '#ef4444';
+                document.getElementById('eod-summary').innerText = 'Connection to AI server timed out. Please try again.';
+                document.getElementById('eod-trends').innerHTML = '<li>Network error</li>';
+                document.getElementById('eod-actions').innerHTML = '<li>Check connection</li>';
             }
         } catch (error) {
             console.error("Report generation error:", error);
-            alert("Error contacting AI server: " + error.message);
+            eodReportContainer.classList.remove('hidden');
+            document.getElementById('eod-rating').innerText = 'ERROR';
+            document.getElementById('eod-rating').style.background = '#ef4444';
+            document.getElementById('eod-summary').innerText = 'Connection to AI server timed out. Please try again.';
+            document.getElementById('eod-trends').innerHTML = '<li>Network error</li>';
+            document.getElementById('eod-actions').innerHTML = '<li>Check connection</li>';
         } finally {
             reportLoader.classList.add('hidden');
             generateReportBtn.disabled = false;
@@ -482,11 +492,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     resultsContainer.classList.remove('hidden');
                 } else {
-                    alert('Error: ' + (result.error || 'Failed to process document'));
+                    console.error('Error: ' + (result.error || 'Failed to process document'));
+                    jsonOutput.innerHTML = `<div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; border-radius: 4px; margin-top: 10px;">
+                        <h4 style="color: #ef4444; margin: 0 0 5px 0;">⚠️ Document Processing Failed</h4>
+                        <p style="margin: 0; color: #cbd5e1; font-size: 14px;">The AI microservice is currently unreachable or starting up. Please wait 10 seconds and try again.</p>
+                    </div>`;
+                    resultsContainer.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Upload error:", error);
-                alert("An error occurred while uploading.");
+                jsonOutput.innerHTML = `<div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; border-radius: 4px; margin-top: 10px;">
+                    <h4 style="color: #ef4444; margin: 0 0 5px 0;">⚠️ Network Timeout</h4>
+                    <p style="margin: 0; color: #cbd5e1; font-size: 14px;">Connection to the AI server failed. Please wait a moment and try again.</p>
+                </div>`;
+                resultsContainer.classList.remove('hidden');
             } finally {
                 // Reset UI
                 loader.classList.add('hidden');

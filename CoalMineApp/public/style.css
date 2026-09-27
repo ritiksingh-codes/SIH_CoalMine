@@ -400,4 +400,97 @@ pre {
 .leaflet-popup-content img { width: 100%; border-radius: 6px; margin-top: 8px; }
 .leaflet-container a.leaflet-popup-close-button { color: var(--text-secondary); }
 
-
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    .dashboard {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+    }
+    
+    .sidebar {
+        width: 100%;
+        padding: 16px;
+        position: sticky;
+        top: 0;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        z-index: 1000;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .logo {
+        text-align: center;
+        margin-bottom: 12px;
+    }
+    
+    .nav-menu {
+        margin-top: 0;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        /* Hide scrollbar */
+        scrollbar-width: none; 
+    }
+    
+    .nav-menu::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .nav-btn {
+        width: auto;
+        white-space: nowrap;
+        margin-bottom: 0;
+        padding: 8px 12px;
+        font-size: 14px;
+        flex: 0 0 auto;
+        text-align: center;
+    }
+    
+    .stats-card {
+        display: none; /* Hide on mobile to save vertical space */
+    }
+    
+    .main-content {
+        padding: 16px;
+        height: auto;
+        overflow-y: visible;
+    }
+    
+    header h1 {
+        font-size: 24px;
+    }
+    
+    .grid-container {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    
+    .map-container {
+        height: 400px;
+    }
+    
+    .feed-container {
+        height: 500px; /* Force height so it scrolls on mobile */
+    }
+    
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .hazard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    #eod-report-container > div {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .legacy-container {
+        padding: 20px;
+    }
+}

@@ -380,6 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loader = document.getElementById('loader');
     const resultsContainer = document.getElementById('ocr-results');
     const jsonOutput = document.getElementById('json-output');
+    const ocrStatusMessage = document.getElementById('ocr-status-message');
 
     uploadZone.addEventListener('click', () => fileInput.click());
 
@@ -434,6 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await response.json();
                 
                 if (response.ok) {
+                    if (ocrStatusMessage) ocrStatusMessage.innerHTML = '<h4 style="color: #4CAF50;">✅ Successfully Digitized & Synced to Headquarters!</h4>';
                     const data = result.data;
                     const violationsHtml = (data.critical_violations && data.critical_violations.length > 0)
                         ? `<ul style="margin: 8px 0; padding-left: 20px; color: #ff5252;">${data.critical_violations.map(v => `<li>${v}</li>`).join('')}</ul>`
@@ -493,6 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultsContainer.classList.remove('hidden');
                 } else {
                     console.error('Error: ' + (result.error || 'Failed to process document'));
+                    if (ocrStatusMessage) ocrStatusMessage.innerHTML = '';
                     jsonOutput.innerHTML = `<div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; border-radius: 4px; margin-top: 10px;">
                         <h4 style="color: #ef4444; margin: 0 0 5px 0;">⚠️ Document Processing Failed</h4>
                         <p style="margin: 0; color: #cbd5e1; font-size: 14px;">The AI microservice is currently unreachable or starting up. Please wait 10 seconds and try again.</p>
@@ -501,6 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error("Upload error:", error);
+                if (ocrStatusMessage) ocrStatusMessage.innerHTML = '';
                 jsonOutput.innerHTML = `<div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; border-radius: 4px; margin-top: 10px;">
                     <h4 style="color: #ef4444; margin: 0 0 5px 0;">⚠️ Network Timeout</h4>
                     <p style="margin: 0; color: #cbd5e1; font-size: 14px;">Connection to the AI server failed. Please wait a moment and try again.</p>

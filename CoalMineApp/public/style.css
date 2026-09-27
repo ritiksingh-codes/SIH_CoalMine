@@ -46,6 +46,7 @@ body {
 /* Sidebar */
 .sidebar {
     width: 260px;
+    flex-shrink: 0;
     padding: 24px;
     display: flex;
     flex-direction: column;

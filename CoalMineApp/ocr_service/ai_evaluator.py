@@ -37,7 +37,7 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-2.5-flash-8b',
                 contents=f"Hazard Observation: {hazard_text}",
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -90,7 +90,7 @@ def generate_eod_report(hazards_list: list) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-2.5-flash-8b',
                 contents=f"Today's Hazards:\n{hazards_text}",
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,

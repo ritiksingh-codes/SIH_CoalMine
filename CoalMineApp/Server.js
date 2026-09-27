@@ -113,7 +113,7 @@ let historicalLedger = loadData(HISTORICAL_FILE);
 
 function processArchives() {
   const now = new Date();
-  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+  const TWENTY_FOUR_HOURS = 365 * 24 * 60 * 60 * 1000; // Modified for SIH: keep for 1 year so they don't disappear
   let didShift = false;
 
   const stillLive = [];

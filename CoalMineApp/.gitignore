@@ -44,8 +44,8 @@ yarn-error.*
 .env
 
 # Server data and uploads (runtime data, not source code)
-uploads/
-data/
+# uploads/
+# data/
 
 # Python virtual environment
 ocr_service/venv/

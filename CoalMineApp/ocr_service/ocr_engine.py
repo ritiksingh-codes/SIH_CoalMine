@@ -50,12 +50,23 @@ def process_legacy_document(image_bytes: bytes) -> dict:
         }
     }
     
-    response = client.models.generate_content(
-        model='gemini-1.5-flash',
-        contents=[image_part, prompt],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=schema,
-        )
-    )
-    return json.loads(response.text)
+    import time
+    from google.genai import errors
+    
+    max_retries = 6
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=[image_part, prompt],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=schema,
+                )
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                time.sleep((2 ** attempt) + 1)
+            else:
+                raise

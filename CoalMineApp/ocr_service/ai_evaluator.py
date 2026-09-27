@@ -30,17 +30,28 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
         }
     }
 
-    response = client.models.generate_content(
-        model='gemini-1.5-flash',
-        contents=f"Hazard Observation: {hazard_text}",
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            response_mime_type="application/json",
-            response_schema=schema,
-            temperature=0.0
-        )
-    )
-    return json.loads(response.text)
+    import time
+    from google.genai import errors
+    
+    max_retries = 6
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=f"Hazard Observation: {hazard_text}",
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    response_mime_type="application/json",
+                    response_schema=schema,
+                    temperature=0.0
+                )
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                time.sleep((2 ** attempt) + 1)
+            else:
+                raise
 
 def generate_eod_report(hazards_list: list) -> dict:
     if not hazards_list:
@@ -72,14 +83,25 @@ def generate_eod_report(hazards_list: list) -> dict:
     if not client:
         raise Exception("GEMINI_API_KEY is missing from environment variables.")
 
-    response = client.models.generate_content(
-        model='gemini-1.5-flash',
-        contents=f"Today's Hazards:\n{hazards_text}",
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            response_mime_type="application/json",
-            response_schema=schema,
-            temperature=0.3
-        )
-    )
-    return json.loads(response.text)
+    import time
+    from google.genai import errors
+    
+    max_retries = 6
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=f"Today's Hazards:\n{hazards_text}",
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    response_mime_type="application/json",
+                    response_schema=schema,
+                    temperature=0.3
+                )
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                time.sleep((2 ** attempt) + 1)
+            else:
+                raise

@@ -1,1 +1,79 @@
-[]
+[
+  {
+    "id": "1",
+    "mine_id": "SECL-PIT-04",
+    "hazard_type": "Methane Gas Leak",
+    "severity": "CRITICAL",
+    "description": "Continuous high methane concentration detected near Sector 4 working face. Sensor reading is at 2.5% exceeding statutory limits. Immediate evacuation in process.",
+    "latitude": 25.4642472,
+    "longitude": 78.6378079,
+    "image_uri": "",
+    "timestamp": "2026-09-27T10:00:00.000Z"
+  },
+  {
+    "id": "2",
+    "mine_id": "WCL-PIT-02",
+    "hazard_type": "Roof Support Failure",
+    "severity": "HIGH",
+    "description": "Noticeable bending and structural stress on two hydraulic roof supports in Gallery B. Minor rockfall observed in the last hour. Work stopped temporarily.",
+    "latitude": 25.4651,
+    "longitude": 78.6385,
+    "image_uri": "",
+    "timestamp": "2026-09-27T11:15:00.000Z"
+  },
+  {
+    "id": "3",
+    "mine_id": "MCL-PIT-09",
+    "hazard_type": "Conveyor Belt Fraying",
+    "severity": "MEDIUM",
+    "description": "The main conveyor belt near transfer point 3 is showing significant wear and fraying on the edges. Needs maintenance before the next shift to prevent tearing and friction fires.",
+    "latitude": 25.4629,
+    "longitude": 78.6352,
+    "image_uri": "",
+    "timestamp": "2026-09-27T12:30:00.000Z"
+  },
+  {
+    "id": "4",
+    "mine_id": "ECL-PIT-12",
+    "hazard_type": "Underground Water Inundation",
+    "severity": "CRITICAL",
+    "description": "Sudden heavy water seepage detected from the eastern coal seam wall. Water level in Gallery 3 has risen by 15 inches in the last 20 minutes. Main drainage pumps are currently overwhelmed.",
+    "latitude": 25.4665,
+    "longitude": 78.6401,
+    "image_uri": "",
+    "timestamp": "2026-09-27T13:45:00.000Z"
+  },
+  {
+    "id": "5",
+    "mine_id": "CCL-PIT-01",
+    "hazard_type": "Ventilation Fan Failure",
+    "severity": "HIGH",
+    "description": "Primary exhaust fan for Sector 7 has unexpectedly shut down. Airflow has dropped below statutory limits, risking a buildup of noxious gases. Miners have been instructed to pause blasting operations.",
+    "latitude": 25.4610,
+    "longitude": 78.6325,
+    "image_uri": "",
+    "timestamp": "2026-09-27T14:20:00.000Z"
+  },
+  {
+    "id": "6",
+    "mine_id": "BCCL-PIT-05",
+    "hazard_type": "Electrical Panel Sparking",
+    "severity": "CRITICAL",
+    "description": "Exposed high-voltage cables near the main transformer station are actively sparking. High risk of ignition due to the presence of airborne coal dust in the vicinity.",
+    "latitude": 25.4682,
+    "longitude": 78.6368,
+    "image_uri": "",
+    "timestamp": "2026-09-27T15:05:00.000Z"
+  },
+  {
+    "id": "7",
+    "mine_id": "SECL-PIT-08",
+    "hazard_type": "Heavy Coal Dust Accumulation",
+    "severity": "MEDIUM",
+    "description": "Significant buildup of combustible coal dust observed on the floor and side ribs of Haulage Road B. The area requires immediate stone-dusting (rock dusting) to mitigate explosion risks.",
+    "latitude": 25.4635,
+    "longitude": 78.6420,
+    "image_uri": "",
+    "timestamp": "2026-09-27T16:10:00.000Z"
+  }
+]

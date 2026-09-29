@@ -252,23 +252,21 @@ app.post('/api/hazards', async (req, res) => {
     console.log("==========================================================\n");
 
     // 3. REAL-TIME EVENT STREAMING (Message Broker)
-    if (isCritical) {
-      console.log(`\n⚠️ [AI PREDICTION ALERT] CRITICAL HAZARD DETECTED! Broadcasting to all workers via WebSockets.\n`);
-      const alertMsg = aiCompliance 
-        ? `Danger detected: ${hazard.hazard_type}. AI Warning: ${aiCompliance.recommended_action}`
-        : `Danger detected: ${hazard.hazard_type}. ${hazard.description}. Please stay clear of this area!`;
-        
-      io.emit('hazard_alert', {
-        id: hazard.id,
-        title: "🚨 EVACUATION / CRITICAL WARNING 🚨",
-        message: alertMsg,
-        severity: aiCompliance ? aiCompliance.severity : hazard.severity,
-        recommendation: aiCompliance ? aiCompliance.recommended_action : "Follow standard safety protocols.",
-        latitude: hazard.latitude,
-        longitude: hazard.longitude,
-        timestamp: new Date().toISOString()
-      });
-    }
+    console.log(`\n⚠️ [AI PREDICTION ALERT] HAZARD LOGGED! Broadcasting to all workers via WebSockets.\n`);
+    const alertMsg = aiCompliance 
+      ? `AI Warning: ${aiCompliance.recommended_action}`
+      : `Warning: ${hazard.description}. Please stay clear of this area!`;
+      
+    io.emit('hazard_alert', {
+      id: hazard.id,
+      title: isCritical ? "🚨 EVACUATION / CRITICAL WARNING 🚨" : "⚠️ HAZARD ALERT ⚠️",
+      message: alertMsg,
+      severity: aiCompliance ? aiCompliance.severity : hazard.severity,
+      recommendation: aiCompliance ? aiCompliance.recommended_action : "Follow standard safety protocols.",
+      latitude: hazard.latitude,
+      longitude: hazard.longitude,
+      timestamp: new Date().toISOString()
+    });
 
     res.status(200).json({ success: true, message: "Logged at Headquarters with Photo" });
   } catch (e) {

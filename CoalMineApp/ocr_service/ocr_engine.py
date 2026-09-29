@@ -35,20 +35,17 @@ def process_legacy_document(image_bytes: bytes) -> dict:
         mime_type='image/jpeg',
     )
     
-    prompt = 'You are a highly accurate mining safety digitizer. Read the ENTIRE handwritten text from this historical mining log. Output ONLY JSON with exactly these keys: "report_date" (string), "time" (string), "pit_seam_id" (string), "gas_concentration_ch4" (string), "equipment_status" (string), "full_narrative" (string), "critical_violations" (array of strings).'
+    prompt = 'You are a highly accurate mining safety digitizer. Read the ENTIRE handwritten text from this historical mining log. Output ONLY JSON.'
     
-    schema = {
-        "type": "OBJECT",
-        "properties": {
-            "report_date": {"type": "STRING"},
-            "time": {"type": "STRING"},
-            "pit_seam_id": {"type": "STRING"},
-            "gas_concentration_ch4": {"type": "STRING"},
-            "equipment_status": {"type": "STRING"},
-            "full_narrative": {"type": "STRING"},
-            "critical_violations": {"type": "ARRAY", "items": {"type": "STRING"}}
-        }
-    }
+    from pydantic import BaseModel
+    class OCRResult(BaseModel):
+        report_date: str
+        time: str
+        pit_seam_id: str
+        gas_concentration_ch4: str
+        equipment_status: str
+        full_narrative: str
+        critical_violations: list[str]
     
     import time
     from google.genai import errors
@@ -57,11 +54,11 @@ def process_legacy_document(image_bytes: bytes) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-1.5-flash',
                 contents=[image_part, prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=schema,
+                    response_schema=OCRResult,
                 )
             )
             return json.loads(response.text)

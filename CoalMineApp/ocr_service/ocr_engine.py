@@ -54,7 +54,7 @@ def process_legacy_document(image_bytes: bytes) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.8-flash',
                 contents=[image_part, prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
@@ -66,4 +66,5 @@ def process_legacy_document(image_bytes: bytes) -> dict:
             if ("429" in str(e) or "503" in str(e)) and attempt < max_retries - 1:
                 time.sleep((2 ** attempt) + 1)
             else:
-                raise
+                from fastapi import HTTPException
+                raise HTTPException(status_code=500, detail=str(e))

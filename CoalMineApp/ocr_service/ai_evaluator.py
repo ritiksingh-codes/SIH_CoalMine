@@ -34,7 +34,7 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.8-flash',
                 contents=f"Hazard Observation: {hazard_text}",
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -48,7 +48,8 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
             if ("429" in str(e) or "503" in str(e)) and attempt < max_retries - 1:
                 time.sleep((2 ** attempt) + 1)
             else:
-                raise
+                from fastapi import HTTPException
+                raise HTTPException(status_code=500, detail=str(e))
 
 def generate_eod_report(hazards_list: list) -> dict:
     if not hazards_list:
@@ -84,7 +85,7 @@ def generate_eod_report(hazards_list: list) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.8-flash',
                 contents=f"Today's Hazards:\n{hazards_text}",
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -98,4 +99,5 @@ def generate_eod_report(hazards_list: list) -> dict:
             if ("429" in str(e) or "503" in str(e)) and attempt < max_retries - 1:
                 time.sleep((2 ** attempt) + 1)
             else:
-                raise
+                from fastapi import HTTPException
+                raise HTTPException(status_code=500, detail=str(e))

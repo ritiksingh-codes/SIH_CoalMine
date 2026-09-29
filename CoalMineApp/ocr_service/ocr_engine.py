@@ -50,11 +50,11 @@ def process_legacy_document(image_bytes: bytes) -> dict:
     import time
     from google.genai import errors
     
-    max_retries = 6
+    max_retries = 2
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.5-pro',
                 contents=[image_part, prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",

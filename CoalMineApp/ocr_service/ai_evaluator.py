@@ -30,11 +30,11 @@ def predict_hazard_compliance(hazard_text: str) -> dict:
     import time
     from google.genai import errors
     
-    max_retries = 6
+    max_retries = 2
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.5-pro',
                 contents=f"Hazard Observation: {hazard_text}",
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -81,11 +81,11 @@ def generate_eod_report(hazards_list: list) -> dict:
     import time
     from google.genai import errors
     
-    max_retries = 6
+    max_retries = 2
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.5-pro',
                 contents=f"Today's Hazards:\n{hazards_text}",
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
